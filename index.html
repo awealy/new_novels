@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>彩凤书阁 - 同人小说阅读平台</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-dragon"></i>
+                <span>彩凤书阁</span>
+            </div>
+            <div class="nav-search">
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="搜索小说、作者或标签...">
+                    <button id="searchBtn"><i class="fas fa-search"></i></button>
+                </div>
+            </div>
+            <div class="nav-links">
+                <a href="#home">首页</a>
+                <a href="#library">书库</a>
+                <a href="#about">关于</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主页横幅 -->
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <h1>彩凤书阁</h1>
+            <p>沉浸式同人小说阅读体验</p>
+            <div class="hero-search">
+                <input type="text" id="heroSearch" placeholder="输入关键词搜索小说...">
+                <button onclick="performSearch()">搜索</button>
+            </div>
+        </div>
+        <div class="hero-pattern"></div>
+    </section>
+
+    <!-- 小说列表 -->
+    <section id="library" class="novel-library">
+        <div class="container">
+            <h2>小说书库</h2>
+            <div class="filter-tabs">
+                <button class="filter-tab active" data-filter="all">全部</button>
+                <button class="filter-tab" data-filter="玄幻">玄幻</button>
+                <button class="filter-tab" data-filter="言情">言情</button>
+                <button class="filter-tab" data-filter="仙侠">仙侠</button>
+                <button class="filter-tab" data-filter="都市">都市</button>
+            </div>
+            <div id="novelGrid" class="novel-grid">
+                <!-- 小说卡片将通过JavaScript动态生成 -->
+            </div>
+        </div>
+    </section>
+
+    <!-- 底部信息 -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>彩凤书阁</h3>
+                    <p>专为同人小说爱好者打造的阅读平台</p>
+                </div>
+                <div class="footer-section">
+                    <h4>快速链接</h4>
+                    <a href="#home">首页</a>
+                    <a href="#library">书库</a>
+                    <a href="#upload">投稿</a>
+                </div>
+                <div class="footer-section">
+                    <h4>支持格式</h4>
+                    <p>Markdown (.md)</p>
+                    <p>自动索引生成</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2023 彩凤书阁 - 本网站内容均为用户上传，版权归原作者所有</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 小说详情模态框 -->
+    <div id="novelModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/search.js"></script>
+</body>
+</html>
