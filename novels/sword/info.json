@@ -1,0 +1,16 @@
+{
+      "id": 1,
+      "title": "周少&慕溪",
+      "author": "***",
+      "description": "暂无",
+      "tags": ["校园", "同人", "青春", "双楠"],
+      "cover": "📖",
+      "path": "novels/sword",
+      "chapters": [
+        {"title": "1-10", "file": "1-10.md"},
+        {"title": "11-20", "file": "11-20.md"},
+        {"title": "21-30", "file": "20-30.md"}
+      ],
+      "updateTime": "2025-10-24",
+      "wordCount": 125000
+    }
