@@ -30,45 +30,45 @@ class NovelApp {
     }
 
     // 示例数据
-    // getSampleData() {
-    //     return [
-    //         {
-    //             "id": 1,
-    //           "title": "周少&慕溪",
-    //           "author": "***",
-    //           "description": "暂无",
-    //           "tags": ["校园", "同人", "青春", "双楠"],
-    //           "cover": "📖",
-    //           "path": "novels/sword",
-    //           "chapters": [
-    //             {"title": "1-10", "file": "1-10.md"},
-    //             {"title": "11-20", "file": "11-20.md"},
-    //             {"title": "21-30", "file": "20-30.md"}
-    //           ],
-    //           "updateTime": "2025-10-24",
-    //           "wordCount": 125000
-    //         },
-    //         {
-    //           "id": 2,
-    //           "title": "诡异陈萧",
-    //           "author": "wyxrl",
-    //           "description": "某天陈星宇掉进了一个神秘空间...",
-    //           "tags": ["无限流", "双男", "恐怖", "热血"],
-    //           "cover": "🎮",
-    //           "path": "novels/professional",
-    //           "chapters": [
-    //             {"title": "第一章 神秘之门后的真相", "file": "第一章 神秘之门后的真相.md"},
-    //             {"title": "第二章 深入工厂", "file": "第二章 深入工厂.md"},
-    //             {"title": "第三章 主控室的危机", "file": "第三章 主控室的危机.md"},
-    //             {"title": "第四章 绝境求生与神秘力量", "file": "第四章 绝境求生与神秘力量.md"},
-    //             {"title": "第五章 新副本前奏：神秘小镇", "file": "第五章 新副本前奏：神秘小镇.md"},
-    //             {"title": "第六章 月圆之夜的仪式", "file": "第六章 月圆之夜的仪式.md"}
-    //           ],
-    //           "updateTime": "2025-11-07",
-    //           "wordCount": 98000
-    //         }
-    //     ];
-    // }
+     getSampleData() {
+         return [
+             {
+              "id": 1,
+              "title": "周少&慕溪",
+              "author": "***",
+              "description": "暂无",
+              "tags": ["校园", "同人", "青春", "双男"],
+              "cover": "📖",
+              "path": "novels/sword",
+              "chapters": [
+                {"title": "1-10", "file": "1-10.md"},
+                {"title": "11-20", "file": "11-20.md"},
+                {"title": "21-30", "file": "21-30.md"}
+              ],
+              "updateTime": "2025-10-24",
+              "wordCount": 125000
+            },
+            {
+              "id": 2,
+              "title": "诡异陈萧",
+              "author": "wyxrl",
+              "description": "某天陈星宇掉进了一个神秘空间...",
+              "tags": ["无限流", "双男", "恐怖", "热血"],
+              "cover": "🎮",
+              "path": "novels/professional",
+              "chapters": [
+                {"title": "第二章 深入工厂", "file": "第二章 深入工厂.md"},
+                {"title": "第三章 主控室的危机", "file": "第三章 主控室的危机.md"},
+                {"title": "第四章 绝境求生与神秘力量", "file": "第四章 绝境求生与神秘力量.md"},
+                {"title": "第五章 新副本前奏：神秘小镇", "file": "第五章 新副本前奏：神秘小镇.md"},
+                {"title": "第六章 月圆之夜的仪式", "file": "第六章 月圆之夜的仪式.md"}
+                {"title": "第七章 神秘之门后的真相", "file": "第一章 神秘之门后的真相.md"},
+              ],
+              "updateTime": "2025-11-07",
+              "wordCount": 98000
+            }
+         ];
+     }
 
     // 渲染小说列表
     renderNovels() {
