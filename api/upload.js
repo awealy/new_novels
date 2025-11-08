@@ -1,5 +1,14 @@
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
+  // ✅ 设置 CORS 允许 GitHub Pages 访问
+  res.setHeader("Access-Control-Allow-Origin", "https://awealy.github.io");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") {
+    return res.status(200).end(); // 预检请求快速返回
+  }
+
+  if (req.method !== 'POST')
+    return res.status(405).json({ message: 'Method not allowed' });
 
   const { filename, content, username } = req.body;
 
@@ -24,7 +33,7 @@ export default async function handler(req, res) {
 
     const data = await response.json();
     if (response.ok) {
-      res.status(200).json({ message: 'Upload success', url: data.content.html_url });
+      res.status(200).json({ message: '✅ 上传成功', url: data.content.html_url });
     } else {
       res.status(400).json(data);
     }
