@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阅读器 - 彩凤书阁</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/reader.css">
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="reader-container">
+        <!-- 阅读器头部 -->
+        <header class="reader-header">
+            <button onclick="window.history.back()" class="back-btn">
+                <i class="fas fa-arrow-left"></i> 返回
+            </button>
+            <h1 id="chapterTitle">加载中...</h1>
+            <div class="reader-controls">
+                <button id="fontSmaller">A-</button>
+                <button id="fontReset">A</button>
+                <button id="fontLarger">A+</button>
+                <button id="darkModeToggle"><i class="fas fa-moon"></i></button>
+            </div>
+        </header>
+
+        <!-- 章节导航 -->
+        <nav class="chapter-nav">
+            <button id="prevChapter"><i class="fas fa-chevron-left"></i> 上一章</button>
+            <select id="chapterSelect">
+                <option>加载章节列表...</option>
+            </select>
+            <button id="nextChapter">下一章 <i class="fas fa-chevron-right"></i></button>
+        </nav>
+
+        <!-- 阅读内容区域 -->
+        <main class="reader-content">
+            <article id="novelContent">
+                <div class="loading">
+                    <i class="fas fa-book-open fa-spin"></i>
+                    <p>正在加载章节内容...</p>
+                </div>
+            </article>
+        </main>
+
+        <!-- 阅读进度 -->
+        <footer class="reader-footer">
+            <div class="progress-bar">
+                <div class="progress"></div>
+            </div>
+            <div class="page-info">
+                <span id="currentPage">1</span> / <span id="totalPages">1</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="js/reader.js"></script>
+</body>
+</html>
