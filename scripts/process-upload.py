@@ -172,7 +172,7 @@ class NovelProcessor:
         novels_data['novels'].append(novel_info)
         
         # 按ID排序
-        novels_data['novels'].sort(key=lambda x: x['id'])
+        novels_data['novels'].sort(key=lambda x: x.get('id', 0))
         
         # 保存更新
         with open(self.novels_json, 'w', encoding='utf-8') as f:
