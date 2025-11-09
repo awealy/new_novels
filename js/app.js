@@ -23,7 +23,7 @@ class NovelApp {
     // 增强的加载小说数据方法
     async loadNovels() {
         this.setLoading(true);
-        
+
         try {
             const response = await fetch('novels.json');
             
@@ -60,7 +60,7 @@ class NovelApp {
         }
     }
 
-    // 尝试修复JSON格式错误[8](@ref)
+    // 尝试修复JSON格式错误
     tryFixJson(jsonString) {
         try {
             // 先尝试直接解析
@@ -68,23 +68,23 @@ class NovelApp {
             return jsonString;
         } catch (error) {
             console.warn('JSON解析失败，尝试修复...', error.message);
-            
+
             let fixed = jsonString;
-            
-            // 修复1: 处理单引号[8](@ref)
+
+            // 修复1: 处理单引号
             fixed = fixed.replace(/(\w+):\s*'([^']*)'/g, '"$1": "$2"');
-            
-            // 修复2: 处理未加引号的属性名[8](@ref)
+
+            // 修复2: 处理未加引号的属性名
             fixed = fixed.replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3');
-            
-            // 修复3: 移除尾随逗号[8](@ref)
+
+            // 修复3: 移除尾随逗号
             fixed = fixed.replace(/,\s*([}\]])/g, '$1');
-            
+
             // 修复4: 处理可能的多余字符
             fixed = fixed.replace(/[^\x20-\x7E\n\r\t]/g, '');
-            
+
             console.log('修复后的JSON:', fixed.substring(0, 500) + '...');
-            
+
             return fixed;
         }
     }
@@ -99,14 +99,14 @@ class NovelApp {
             }
             return hasField;
         });
-        
+
         // 清理章节数据
         if (isValid && novel.chapters) {
             novel.chapters = novel.chapters.filter(chapter => 
                 chapter && chapter.title && chapter.file
             );
         }
-        
+
         return isValid;
     }
 
@@ -146,11 +146,11 @@ class NovelApp {
     updateStats() {
         const statsDiv = document.getElementById('novelStats');
         if (!statsDiv) return;
-        
+
         const totalNovels = this.novels.length;
         const totalWords = this.novels.reduce((sum, novel) => sum + (novel.wordCount || 0), 0);
         const totalChapters = this.novels.reduce((sum, novel) => sum + (novel.chapters?.length || 0), 0);
-        
+
         statsDiv.innerHTML = `
             <div class="stat-item">
                 <span class="stat-number">${totalNovels}</span>
@@ -170,75 +170,7 @@ class NovelApp {
     // 示例数据（保持不变）
     getSampleData() {
         return [
-            {
-                "id": 1,
-                "title": "周少&慕溪",
-                "author": "***",
-                "description": "暂无",
-                "tags": ["校园", "同人", "青春", "双男"],
-                "cover": "📖",
-                "path": "novels/sword",
-                "chapters": [
-                    { "title": "1-10", "file": "1-10.md" },
-                    { "title": "11-20", "file": "11-20.md" },
-                    { "title": "21-30", "file": "21-30.md" }
-                ],
-                "updateTime": "2025-10-24",
-                "wordCount": 125000
-            },
-            {
-                "id": 2,
-                "title": "诡异陈萧",
-                "author": "wyxrl",
-                "description": "某天陈星宇掉进了一个神秘空间...",
-                "tags": ["无限流", "双男", "恐怖", "热血"],
-                "cover": "🎮",
-                "path": "novels/professional",
-                "chapters": [
-                    { "title": "第二章 深入工厂", "file": "第二章 深入工厂.md" },
-                    { "title": "第三章 主控室的危机", "file": "第三章 主控室的危机.md" },
-                    { "title": "第四章 绝境求生与神秘力量", "file": "第四章 绝境求生与神秘力量.md" },
-                    { "title": "第五章 新副本前奏：神秘小镇", "file": "第五章 新副本前奏：神秘小镇.md" },
-                    { "title": "第六章 月圆之夜的仪式", "file": "第六章 月圆之夜的仪式.md" },
-                    { "title": "第七章 神秘之门后的真相", "file": "第一章 神秘之门后的真相.md" }
-                ],
-                "updateTime": "2025-11-07",
-                "wordCount": 98000
-            },
-            {
-                "id": 3,
-                "title": "漫漫消沉",
-                "author": "爱装的wy",
-                "description": "这是新人的第一个作品，可以支持一下吗？可能更新有点慢，双男主，非np【萧贺怊】×【陈俞】有副cp，攻会提前知道受的马甲，但受不知道 陈俞【女装大佬】开学第一天就和萧贺怊【外冷内热校霸】结下了梁子，没想到还被分到了同一个寝室..",
-                "tags": ["都市", "双男", "青春", "甜宠", "爽文"],
-                "cover": "🎮",
-                "path": "novels/cxy",
-                "chapters": [
-                    {"title": "引子", "file": "引子.md"},
-                    {"title": "第 1 章 初识", "file": "第 1 章 初识.md"},
-                    {"title": "第 2 章 跑操", "file": "第 2 章 跑操.md"},
-                    {"title": "第 3 章 举报", "file": "第 3 章 举报.md"},
-                    {"title": "第 4 章 阅读节活动", "file": "第 4 章 阅读节活动.md"},
-                    {"title": "第 5 章 暗流涌动", "file": "第 5 章 暗流涌动.md"},
-                    {"title": "第 6 章：危机四伏与转机乍现", "file": "第 6 章：危机四伏与转机乍现.md"},
-                    {"title": "第 7 章：新的阴谋与困境", "file": "第 7 章：新的阴谋与困境.md"},
-                    {"title": "第 8 章：大赛前夕的暗潮", "file": "第 8 章：大赛前夕的暗潮.md"},
-                    {"title": "第 9 章：平静中的余波与新的契机", "file": "第 9 章：平静中的余波与新的契机.md"},
-                    {"title": "第 10 章：合作波折与意外转机", "file": "第 10 章：合作波折与意外转机.md"},
-                    {"title": "第 11 章：海外风云起", "file": "第 11 章：海外风云起.md"},
-                    {"title": "第 12 章：内外交困与破局之策", "file": "第 12 章：内外交困与破局之策.md"},
-                    {"title": "第 13 章：合作洽谈的波折与转机", "file": "第 13 章：合作洽谈的波折与转机.md"},
-                    {"title": "第 14 章：项目推进的挑战与成长", "file": "第 14 章：项目推进的挑战与成长.md"},
-                    {"title": "第 15 章：盛名之下的暗涌与抉择", "file": "第 15 章：盛名之下的暗涌与抉择.md"},
-                    {"title": "第 16 章：特殊教育领域的推广与突破", "file": "第 16 章：特殊教育领域的推广与突破.md"},
-                    {"title": "第 17 章：拓展普通教育市场的征程", "file": "第 17 章：拓展普通教育市场的征程.md"},
-                    {"title": "第 18 章：竞争中的突破与新挑战", "file": "第 18 章：竞争中的突破与新挑战.md"},
-                    {"title": "第 19 章：构建教育生态的坎坷之路", "file": "第 19 章：构建教育生态的坎坷之路.md"},
-                    {"title": "第 20 章：破局与升华.", "file": "第 20 章：破局与升华.md"}
-                ],
-                "updateTime": "2025-11-08",
-                "wordCount": 71000
-            }
+            // 示例数据
         ];
     }
 
