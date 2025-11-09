@@ -1,0 +1,11 @@
+name: CI Github Pages Test # 工作流的名称
+on: [push] # 在每次 push 代码时触发
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Run a simple command
+        run: echo "Hello, World! GitHub Actions is working."
