@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: 自动部署到 GitHub Pages
 
 on:
   push:
@@ -17,47 +17,115 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  # 测试阶段
+  test:
+    name: 运行测试
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: 安装依赖
+        run: |
+          [ -f package.json ] && npm ci || echo "无package.json，跳过npm安装"
+          
+      - name: 运行基础验证
+        run: |
+          echo "验证基础文件结构..."
+          ls -la
+          [ -f index.html ] && echo "✓ index.html 存在" || echo "⚠ 缺少index.html"
+          [ -f novels.json ] && echo "✓ novels.json 存在" || echo "⚠ 缺少novels.json"
+
+  # 构建部署阶段
+  build-and-deploy:
+    name: 构建并部署
+    needs: test  # 依赖测试阶段
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout
+      - name: 检出代码
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-          submodules: recursive
           
-      - name: Setup Python
+      - name: 设置 Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           
-      - name: Generate Novel Index
+      - name: 生成小说索引
         run: |
-          python scripts/generate-index.py
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add novels.json
-          git diff --staged --quiet || git commit -m "Update novels index"
-          git push
-          
-      - name: Setup Pages
-        uses: actions/configure-pages@v3
-        
-      - name: Build with Jekyll (禁用，因为我们使用静态文件)
-        run: |
-          # 创建简单的index.html如果不存在
-          if [ ! -f index.html ]; then
-            echo '<html><body><h1>小说网站</h1><p>部署成功!</p></body></html>' > index.html
+          echo "生成小说索引..."
+          if [ -f "scripts/generate-index.py" ]; then
+            python scripts/generate-index.py
+          else
+            echo "使用内置索引生成逻辑"
+            python -c "
+import json
+import os
+from datetime import datetime
+
+def generate_index():
+    novels_data = {
+        'version': '2.0',
+        'lastUpdated': datetime.now().isoformat(),
+        'novels': []
+    }
+    
+    # 扫描novels目录
+    novels_dir = 'novels'
+    if os.path.exists(novels_dir):
+        for item in os.listdir(novels_dir):
+            item_path = os.path.join(novels_dir, item)
+            info_file = os.path.join(item_path, 'info.json')
+            if os.path.isdir(item_path) and os.path.exists(info_file):
+                try:
+                    with open(info_file, 'r', encoding='utf-8') as f:
+                        novel_info = json.load(f)
+                        novels_data['novels'].append(novel_info)
+                    print(f'✓ 已添加: {novel_info.get(\"title\", \"未知标题\")}')
+                except Exception as e:
+                    print(f'⚠ 读取 {info_file} 失败: {e}')
+    
+    # 保存索引
+    with open('novels.json', 'w', encoding='utf-8') as f:
+        json.dump(novels_data, f, ensure_ascii=False, indent=2)
+    print(f'索引生成完成! 共 {len(novels_data[\"novels\"])} 本小说')
+
+generate_index()
+            "
           fi
           
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v2
+      - name: 提交索引更新
+        run: |
+          git config --local user.name "GitHub Action"
+          git config --local user.email "action@github.com"
+          git add novels.json
+          if git diff --staged --quiet; then
+            echo "无索引变更"
+          else
+            git commit -m "自动更新小说索引"
+            git push
+          fi
+
+      - name: 设置 Pages
+        uses: actions/configure-pages@v4
+        
+      - name: 上传制品
+        uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: .
           
-      - name: Deploy to GitHub Pages
+      - name: 部署到 GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4
