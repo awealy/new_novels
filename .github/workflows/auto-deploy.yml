@@ -2,51 +2,62 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:  # 允许手动触发
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-      
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    
+    runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          submodules: recursive
+          
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Generate Novel Index
+        run: |
+          python scripts/generate-index.py
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add novels.json
+          git diff --staged --quiet || git commit -m "Update novels index"
+          git push
+          
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
         
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
-        
-    - name: Generate Novel Index
-      run: |
-        python scripts/generate-index.py
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add novels.json
-        git diff --staged --quiet || git commit -m "Update novels index [skip ci]"
-        git push
-        
-    - name: Setup Pages
-      uses: actions/configure-pages@v3
-      
-    - name: Upload artifact
-      uses: actions/upload-pages-artifact@v2
-      with:
-        path: '.'
-        
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v2
+      - name: Build with Jekyll (禁用，因为我们使用静态文件)
+        run: |
+          # 创建简单的index.html如果不存在
+          if [ ! -f index.html ]; then
+            echo '<html><body><h1>小说网站</h1><p>部署成功!</p></body></html>' > index.html
+          fi
+          
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: '.'
+          
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
