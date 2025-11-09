@@ -5,7 +5,7 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch:  # 允许手动触发
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -17,7 +17,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # 测试阶段
   test:
     name: 运行测试
     runs-on: ubuntu-latest
@@ -31,10 +30,6 @@ jobs:
           node-version: '18'
           cache: 'npm'
           
-      - name: 安装依赖
-        run: |
-          [ -f package.json ] && npm ci || echo "无package.json，跳过npm安装"
-          
       - name: 运行基础验证
         run: |
           echo "验证基础文件结构..."
@@ -42,10 +37,9 @@ jobs:
           [ -f index.html ] && echo "✓ index.html 存在" || echo "⚠ 缺少index.html"
           [ -f novels.json ] && echo "✓ novels.json 存在" || echo "⚠ 缺少novels.json"
 
-  # 构建部署阶段
   build-and-deploy:
     name: 构建并部署
-    needs: test  # 依赖测试阶段
+    needs: test
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -82,7 +76,6 @@ def generate_index():
         'novels': []
     }
     
-    # 扫描novels目录
     novels_dir = 'novels'
     if os.path.exists(novels_dir):
         for item in os.listdir(novels_dir):
@@ -97,7 +90,6 @@ def generate_index():
                 except Exception as e:
                     print(f'⚠ 读取 {info_file} 失败: {e}')
     
-    # 保存索引
     with open('novels.json', 'w', encoding='utf-8') as f:
         json.dump(novels_data, f, ensure_ascii=False, indent=2)
     print(f'索引生成完成! 共 {len(novels_data[\"novels\"])} 本小说')
