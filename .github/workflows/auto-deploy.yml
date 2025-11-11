@@ -1,107 +1,110 @@
-name: 自动部署到 GitHub Pages
+name: 自动更新小说索引
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
+    paths:
+      - 'novels/**'
     branches: [ main, master ]
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  contents: write
 
 jobs:
-  test:
-    name: 运行测试
+  update-index:
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
-        
-      - name: 设置 Node.js
-        uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
-          
-      - name: 运行基础验证
-        run: |
-          echo "验证基础文件结构..."
-          ls -la
-          [ -f index.html ] && echo "✓ index.html 存在" || echo "⚠ 缺少index.html"
-          [ -f novels.json ] && echo "✓ novels.json 存在" || echo "⚠ 缺少novels.json"
-
-  build-and-deploy:
-    name: 构建并部署
-    needs: test
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    
-    steps:
-      - name: 检出代码
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: 设置 Python
+          fetch-depth: 0
+
+      - name: 设置Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-          
+
       - name: 生成小说索引
         run: |
-          echo "生成小说索引..."
-          if [ -f "scripts/generate-index.py" ]; then
-            python scripts/generate-index.py
-          else
-            echo "使用内置索引生成逻辑"
-            python -c "
-import json
-import os
-from datetime import datetime
+          python << 'EOF'
+          import os
+          import json
+          import hashlib
+          from datetime import datetime
 
-def generate_index():
-    novels_data = {
-        'version': '2.0',
-        'lastUpdated': datetime.now().isoformat(),
-        'novels': []
-    }
-    
-    novels_dir = 'novels'
-    if os.path.exists(novels_dir):
-        for item in os.listdir(novels_dir):
-            item_path = os.path.join(novels_dir, item)
-            info_file = os.path.join(item_path, 'info.json')
-            if os.path.isdir(item_path) and os.path.exists(info_file):
-                try:
-                    with open(info_file, 'r', encoding='utf-8') as f:
-                        novel_info = json.load(f)
-                        novels_data['novels'].append(novel_info)
-                    print(f'✓ 已添加: {novel_info.get(\"title\", \"未知标题\")}')
-                except Exception as e:
-                    print(f'⚠ 读取 {info_file} 失败: {e}')
-    
-    with open('novels.json', 'w', encoding='utf-8') as f:
-        json.dump(novels_data, f, ensure_ascii=False, indent=2)
-    print(f'索引生成完成! 共 {len(novels_data[\"novels\"])} 本小说')
+          def generate_novel_index():
+              novels_dir = "novels"
+              index_file = "novels.json"
+              
+              novels_data = {
+                  "version": "2.0",
+                  "lastUpdated": datetime.now().isoformat(),
+                  "totalNovels": 0,
+                  "totalChapters": 0,
+                  "totalWords": 0,
+                  "novels": []
+              }
+              
+              if not os.path.exists(novels_dir):
+                  print("小说目录不存在")
+                  save_index(novels_data, index_file)
+                  return
+              
+              novel_count = 0
+              for novel_slug in os.listdir(novels_dir):
+                  novel_path = os.path.join(novels_dir, novel_slug)
+                  info_file = os.path.join(novel_path, "info.json")
+                  
+                  if os.path.isdir(novel_path) and os.path.exists(info_file):
+                      try:
+                          with open(info_file, 'r', encoding='utf-8') as f:
+                              novel_info = json.load(f)
+                          
+                          # 验证小说信息完整性
+                          if validate_novel_info(novel_info):
+                              novels_data["novels"].append(novel_info)
+                              novel_count += 1
+                              print(f"✓ 已索引: {novel_info.get('title', '未知标题')}")
+                              
+                      except Exception as e:
+                          print(f"⚠ 读取 {info_file} 失败: {e}")
+              
+              # 计算统计信息
+              novels_data["totalNovels"] = len(novels_data["novels"])
+              novels_data["totalChapters"] = sum(
+                  len(novel.get("chapters", [])) for novel in novels_data["novels"]
+              )
+              novels_data["totalWords"] = sum(
+                  novel.get("wordCount", 0) for novel in novels_data["novels"]
+              )
+              
+              # 按ID排序
+              novels_data["novels"].sort(key=lambda x: x.get("id", 0))
+              
+              # 保存索引
+              save_index(novels_data, index_file)
+              print(f"索引生成完成! 共 {novel_count} 本小说")
 
-generate_index()
-            "
-          fi
-          
+          def validate_novel_info(novel_info):
+              required_fields = ["id", "title", "author", "chapters"]
+              return all(field in novel_info for field in required_fields)
+
+          def save_index(novels_data, index_file):
+              try:
+                  with open(index_file, 'w', encoding='utf-8') as f:
+                      json.dump(novels_data, f, ensure_ascii=False, indent=2)
+                  print(f"索引已保存到: {index_file}")
+              except Exception as e:
+                  print(f"保存索引失败: {e}")
+
+          generate_novel_index()
+          EOF
+
       - name: 提交索引更新
         run: |
-          git config --local user.name "GitHub Action"
           git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
           git add novels.json
           if git diff --staged --quiet; then
             echo "无索引变更"
@@ -109,15 +112,3 @@ generate_index()
             git commit -m "自动更新小说索引"
             git push
           fi
-
-      - name: 设置 Pages
-        uses: actions/configure-pages@v4
-        
-      - name: 上传制品
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: .
-          
-      - name: 部署到 GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
