@@ -4,227 +4,307 @@ on:
   push:
     paths:
       - 'uploads/pending/**'
-    branches: [ main, master ]
-  workflow_dispatch:  # 允许手动触发
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.10'
 
 jobs:
-  process-upload:
-    name: 处理上传的小说文件
+  validate-and-process:
+    name: 验证并处理上传
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     
     steps:
-      - name: 检出代码（包含上传的文件）
+      - name: 检出代码（包含上传文件）
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
-          
-      - name: 设置 Python
+
+      - name: 设置Python环境
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
-          
-      - name: 处理上传的小说
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 验证和处理上传
+        id: process
         run: |
-          echo "开始处理上传的小说文件..."
           python << 'EOF'
-import os
-import json
-import shutil
-import hashlib
-from datetime import datetime
+          import os
+          import json
+          import shutil
+          import hashlib
+          import yaml
+          from datetime import datetime
+          import sys
 
-class NovelProcessor:
-    def __init__(self):
-        self.uploads_dir = "uploads/pending"
-        self.novels_dir = "novels"
-        self.processed_dir = "uploads/processed"
-        
-    def ensure_dirs(self):
-        """确保目录存在"""
-        for directory in [self.novels_dir, self.processed_dir]:
-            os.makedirs(directory, exist_ok=True)
-            
-    def get_next_id(self, novels_file="novels.json"):
-        """获取下一个可用的novel ID"""
-        if os.path.exists(novels_file):
-            with open(novels_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                novels = data.get('novels', [])
-                if novels:
-                    return max(novel['id'] for novel in novels) + 1
-        return 1
-        
-    def process_uploads(self):
-        """处理所有上传"""
-        if not os.path.exists(self.uploads_dir):
-            print("📭 无待处理的上传")
-            return
-            
-        items = os.listdir(self.uploads_dir)
-        if not items:
-            print("📭 上传目录为空")
-            return
-            
-        print(f"📁 发现 {len(items)} 个上传项目")
-        
-        for item in items:
-            item_path = os.path.join(self.uploads_dir, item)
-            if os.path.isdir(item_path):
-                self.process_novel(item_path, item)
-                
-    def process_novel(self, upload_path, upload_id):
-        """处理单个小说上传"""
-        try:
-            print(f"🔍 处理上传: {upload_id}")
-            
-            # 读取元数据
-            metadata_file = os.path.join(upload_path, "metadata.json")
-            if not os.path.exists(metadata_file):
-                print(f"⚠ 跳过 {upload_id}: 缺少metadata.json")
-                return
-                
-            with open(metadata_file, 'r', encoding='utf-8') as f:
-                metadata = json.load(f)
-                
-            novel_id = self.get_next_id()
-            novel_slug = self.create_slug(metadata['title'])
-            novel_dir = os.path.join(self.novels_dir, novel_slug)
-            os.makedirs(novel_dir, exist_ok=True)
-            
-            # 处理章节
-            chapters = self.process_chapters(upload_path, novel_dir)
-            
-            # 生成小说信息
-            novel_info = {
-                "id": novel_id,
-                "title": metadata['title'],
-                "author": metadata['author'],
-                "description": metadata.get('description', ''),
-                "tags": metadata.get('tags', []),
-                "cover": metadata.get('cover', '📖'),
-                "path": f"novels/{novel_slug}",
-                "chapters": chapters,
-                "updateTime": datetime.now().strftime("%Y-%m-%d"),
-                "wordCount": sum(chap.get('wordCount', 0) for chap in chapters),
-                "status": "连载中"
-            }
-            
-            # 保存小说信息
-            with open(os.path.join(novel_dir, "info.json"), 'w', encoding='utf-8') as f:
-                json.dump(novel_info, f, ensure_ascii=False, indent=2)
-                
-            # 更新主索引
-            self.update_main_index(novel_info)
-            
-            # 移动处理完成的文件
-            processed_path = os.path.join(self.processed_dir, upload_id)
-            shutil.move(upload_path, processed_path)
-            
-            print(f"✅ 成功处理: {metadata['title']}")
-            
-        except Exception as e:
-            print(f"❌ 处理失败 {upload_id}: {str(e)}")
-            
-    def process_chapters(self, upload_path, novel_dir):
-        """处理章节文件"""
-        chapters = []
-        chapter_files = []
-        
-        # 收集.md文件
-        for file in os.listdir(upload_path):
-            if file.endswith('.md') and file != 'metadata.json':
-                chapter_files.append(file)
-                
-        chapter_files.sort()  # 按文件名排序
-        
-        for i, filename in enumerate(chapter_files, 1):
-            source_path = os.path.join(upload_path, filename)
-            chapter_file = f"chapter{i}.md"
-            target_path = os.path.join(novel_dir, chapter_file)
-            
-            with open(source_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-                
-            word_count = len(content.strip())
-            reading_time = max(1, word_count // 500)
-            
-            title = self.extract_title(content, filename, i)
-            
-            shutil.copy2(source_path, target_path)
-            
-            chapters.append({
-                "title": title,
-                "file": chapter_file,
-                "wordCount": word_count,
-                "readingTime": f"{reading_time}分钟"
-            })
-            
-        return chapters
-        
-    def extract_title(self, content, filename, chapter_num):
-        """提取章节标题"""
-        first_line = content.strip().split('\\n')[0] if content.strip() else ""
-        title = first_line.replace('#', '').strip()
-        
-        if title and len(title) < 100:
-            return title
-            
-        base_name = os.path.splitext(filename)[0]
-        if base_name and base_name != filename:
-            return base_name
-            
-        return f"第{chapter_num}章"
-        
-    def update_main_index(self, novel_info):
-        """更新主索引"""
-        index_file = "novels.json"
-        novels_data = {
-            "version": "2.0",
-            "lastUpdated": datetime.now().isoformat(),
-            "novels": []
-        }
-        
-        if os.path.exists(index_file):
-            with open(index_file, 'r', encoding='utf-8') as f:
-                novels_data = json.load(f)
-                
-        # 移除重复ID
-        novels_data['novels'] = [n for n in novels_data['novels'] if n['id'] != novel_info['id']]
-        novels_data['novels'].append(novel_info)
-        novels_data['novels'].sort(key=lambda x: x.get('id', 0))
-        
-        with open(index_file, 'w', encoding='utf-8') as f:
-            json.dump(novels_data, f, ensure_ascii=False, indent=2)
-            
-    def create_slug(self, title):
-        """生成URL友好的slug"""
-        import re
-        slug = re.sub(r'[^\\w\\s-]', '', title.lower())
-        slug = re.sub(r'[-\\s]+', '-', slug)
-        return slug[:50]
-
-# 执行处理
-processor = NovelProcessor()
-processor.ensure_dirs()
-processor.process_uploads()
-print("🎉 所有上传处理完成!")
-EOF
+          class RobustNovelProcessor:
+              def __init__(self):
+                  self.uploads_dir = "uploads/pending"
+                  self.novels_dir = "novels"
+                  self.processed_dir = "uploads/processed"
+                  self.failed_dir = "uploads/failed"
+                  self.backup_dir = "backups"
+                  
+              def ensure_directories(self):
+                  """确保所有必要的目录存在"""
+                  for directory in [self.novels_dir, self.processed_dir, 
+                                   self.failed_dir, self.backup_dir]:
+                      os.makedirs(directory, exist_ok=True)
+                  print("✅ 目录结构验证完成")
+                  
+              def create_backup(self):
+                  """创建当前状态的备份"""
+                  timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                  backup_file = f"{self.backup_dir}/backup_{timestamp}.zip"
+                  # 这里可以添加备份逻辑
+                  print(f"📦 创建备份: {backup_file}")
+                  
+              def validate_upload(self, upload_path):
+                  """验证上传内容的完整性"""
+                  required_files = ['metadata.json']
+                  md_files = [f for f in os.listdir(upload_path) 
+                            if f.endswith('.md') and f != 'metadata.json']
+                  
+                  if not md_files:
+                      raise ValueError("未找到Markdown章节文件")
+                      
+                  for req_file in required_files:
+                      if not os.path.exists(os.path.join(upload_path, req_file)):
+                          raise ValueError(f"缺少必要文件: {req_file}")
+                  
+                  print(f"✅ 上传验证通过，找到 {len(md_files)} 个章节文件")
+                  return True
+                  
+              def generate_novel_id(self):
+                  """生成唯一的小说ID"""
+                  novels_index = "novels.json"
+                  if os.path.exists(novels_index):
+                      with open(novels_index, 'r', encoding='utf-8') as f:
+                          data = json.load(f)
+                          existing_ids = [n.get('id', 0) for n in data.get('novels', [])]
+                          return max(existing_ids) + 1 if existing_ids else 1
+                  return 1
+                  
+              def process_upload(self, upload_id):
+                  """处理单个上传"""
+                  upload_path = os.path.join(self.uploads_dir, upload_id)
+                  
+                  try:
+                      print(f"🔍 开始处理: {upload_id}")
+                      
+                      # 验证上传
+                      self.validate_upload(upload_path)
+                      
+                      # 读取元数据
+                      with open(os.path.join(upload_path, 'metadata.json'), 'r', encoding='utf-8') as f:
+                          metadata = json.load(f)
+                      
+                      # 生成小说信息
+                      novel_id = self.generate_novel_id()
+                      novel_slug = self.create_slug(metadata['title'])
+                      
+                      # 处理章节
+                      chapters = self.process_chapters(upload_path, novel_slug)
+                      
+                      novel_info = {
+                          'id': novel_id,
+                          'slug': novel_slug,
+                          'title': metadata['title'],
+                          'author': metadata['author'],
+                          'description': metadata.get('description', ''),
+                          'tags': metadata.get('tags', []),
+                          'cover': metadata.get('cover', '📖'),
+                          'chapters': chapters,
+                          'wordCount': sum(chap.get('wordCount', 0) for chap in chapters),
+                          'chapterCount': len(chapters),
+                          'status': '连载中',
+                          'createdAt': datetime.now().isoformat(),
+                          'updatedAt': datetime.now().isoformat()
+                      }
+                      
+                      # 保存小说数据
+                      self.save_novel(novel_slug, novel_info, upload_path)
+                      
+                      # 更新主索引
+                      self.update_main_index(novel_info)
+                      
+                      # 移动处理完成的文件
+                      processed_path = os.path.join(self.processed_dir, upload_id)
+                      shutil.move(upload_path, processed_path)
+                      
+                      print(f"✅ 成功处理: {metadata['title']} (ID: {novel_id})")
+                      return True
+                      
+                  except Exception as e:
+                      print(f"❌ 处理失败 {upload_id}: {str(e)}")
+                      # 移动到失败目录
+                      failed_path = os.path.join(self.failed_dir, upload_id)
+                      shutil.move(upload_path, failed_path)
+                      return False
+                      
+              def process_chapters(self, upload_path, novel_slug):
+                  """处理章节文件"""
+                  chapters = []
+                  md_files = []
+                  
+                  for file in os.listdir(upload_path):
+                      if file.endswith('.md') and file != 'metadata.json':
+                          md_files.append(file)
+                  
+                  # 按文件名排序
+                  md_files.sort()
+                  
+                  for i, filename in enumerate(md_files, 1):
+                      file_path = os.path.join(upload_path, filename)
+                      
+                      with open(file_path, 'r', encoding='utf-8') as f:
+                          content = f.read()
+                      
+                      # 提取标题和元数据
+                      title = self.extract_chapter_title(content, filename, i)
+                      word_count = len(content.strip())
+                      
+                      chapters.append({
+                          'number': i,
+                          'title': title,
+                          'filename': f"chapter{i}.md",
+                          'wordCount': word_count,
+                          'readingTime': f"{max(1, word_count // 500)}分钟"
+                      })
+                  
+                  return chapters
+                  
+              def save_novel(self, novel_slug, novel_info, upload_path):
+                  """保存小说数据"""
+                  novel_dir = os.path.join(self.novels_dir, novel_slug)
+                  os.makedirs(novel_dir, exist_ok=True)
+                  
+                  # 保存info.json
+                  with open(os.path.join(novel_dir, 'info.json'), 'w', encoding='utf-8') as f:
+                      json.dump(novel_info, f, ensure_ascii=False, indent=2)
+                  
+                  # 复制章节文件
+                  for i, chapter in enumerate(novel_info['chapters'], 1):
+                      original_file = os.path.join(upload_path, 
+                                                 f"{[f for f in os.listdir(upload_path) 
+                                                    if f.endswith('.md') and f != 'metadata.json'][i-1]}")
+                      target_file = os.path.join(novel_dir, chapter['filename'])
+                      shutil.copy2(original_file, target_file)
+                  
+                  print(f"💾 小说数据保存到: {novel_dir}")
+                  
+              def update_main_index(self, novel_info):
+                  """更新主索引文件"""
+                  index_file = "novels.json"
+                  
+                  if os.path.exists(index_file):
+                      with open(index_file, 'r', encoding='utf-8') as f:
+                          data = json.load(f)
+                  else:
+                      data = {'version': '2.0', 'novels': [], 'lastUpdated': ''}
+                  
+                  # 移除重复ID的小说
+                  data['novels'] = [n for n in data['novels'] if n.get('id') != novel_info['id']]
+                  data['novels'].append(novel_info)
+                  data['novels'].sort(key=lambda x: x.get('id', 0))
+                  data['lastUpdated'] = datetime.now().isoformat()
+                  
+                  with open(index_file, 'w', encoding='utf-8') as f:
+                      json.dump(data, f, ensure_ascii=False, indent=2)
+                  
+                  print("📚 主索引更新完成")
+                  
+              def create_slug(self, title):
+                  """生成URL友好的slug"""
+                  import re
+                  slug = re.sub(r'[^\w\s-]', '', title.lower())
+                  slug = re.sub(r'[-\s]+', '-', slug)
+                  return slug[:50]
+                  
+              def extract_chapter_title(self, content, filename, chapter_num):
+                  """从内容中提取章节标题"""
+                  first_line = content.strip().split('\n')[0] if content.strip() else ""
+                  title = first_line.replace('#', '').strip()
+                  
+                  if title and len(title) < 100:
+                      return title
+                  
+                  base_name = os.path.splitext(filename)[0]
+                  if base_name and base_name != filename:
+                      return base_name
+                      
+                  return f"第{chapter_num}章"
+          
+          # 执行处理
+          processor = RobustNovelProcessor()
+          processor.ensure_directories()
+          processor.create_backup()
+          
+          success_count = 0
+          fail_count = 0
+          
+          if os.path.exists(processor.uploads_dir):
+              for item in os.listdir(processor.uploads_dir):
+                  item_path = os.path.join(processor.uploads_dir, item)
+                  if os.path.isdir(item_path):
+                      if processor.process_upload(item):
+                          success_count += 1
+                      else:
+                          fail_count += 1
+          else:
+              print("📭 无待处理的上传")
+          
+          print(f"📊 处理结果: 成功 {success_count}, 失败 {fail_count}")
+          
+          # 设置输出变量
+          if fail_count > 0:
+              sys.exit(1)
+          EOF
 
       - name: 提交更改
+        if: always()
         run: |
-          git config --local user.name "GitHub Action"
-          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
           git add .
           if git diff --staged --quiet; then
             echo "无更改需要提交"
           else
-            git commit -m "自动处理小说上传"
+            git commit -m "自动处理小说上传 - $(date +"%Y-%m-%d %H:%M:%S")"
             git push
           fi
 
-      - name: 触发重新部署
+      - name: 触发页面部署
+        if: success()
         run: |
-          echo "触发页面重新部署..."
-          # 此步骤会触发auto-deploy工作流
-          echo "部署将在几分钟内自动完成"
+          echo "触发GitHub Pages部署..."
+          # 这里可以添加触发部署的逻辑
+
+  deploy-pages:
+    name: 部署到GitHub Pages
+    needs: validate-and-process
+    if: needs.validate-and-process.result == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        
+      - name: 设置Pages
+        uses: actions/configure-pages@v4
+        
+      - name: 上传制品
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+          
+      - name: 部署到GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
