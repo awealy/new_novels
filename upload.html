@@ -3,22 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>小说上传 - 彩凤书阁</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>小说上传</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #c53d3d;
+            --secondary-color: #d4af37;
+            --bg-color: #f9f3e9;
+            --text-color: #3a2615;
+            --card-bg: #fff9f0;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui;
+            background: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), #8b4513);
+            padding: 1rem 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .nav-logo {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
         .upload-container {
             max-width: 800px;
             margin: 100px auto 50px;
             padding: 2rem;
             background: var(--card-bg);
             border-radius: 10px;
-            box-shadow: var(--shadow);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-
-        .upload-status {
-            margin: 1rem 0;
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        
+        .file-upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 5px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .file-upload-area:hover {
+            border-color: var(--secondary-color);
+        }
+        
+        .file-list {
+            margin-top: 1rem;
+        }
+        
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+        
+        .submit-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .status-message {
             padding: 1rem;
             border-radius: 5px;
+            margin-top: 1rem;
             display: none;
         }
         
@@ -39,143 +143,469 @@
             color: #004085;
             border: 1px solid #b3d7ff;
         }
+        
+        .github-token-section {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .token-info {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 0.5rem;
+        }
     </style>
 </head>
 <body>
-    <!-- 导航栏保持不变 -->
-    <nav class="navbar">...</nav>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-dragon"></i> 同人文网站
+            </div>
+        </div>
+    </nav>
 
     <div class="upload-container">
-        <h1>小说上传</h1>
+        <h1><i class="fas fa-cloud-upload-alt"></i> 小说上传</h1>
         
-        <div id="uploadStatus" class="upload-status"></div>
+        <div id="statusMessage" class="status-message"></div>
         
         <form id="uploadForm">
-            <div class="form-group">
-                <label>小说标题 *</label>
-                <input type="text" id="novelTitle" required>
+            <div class="github-token-section">
+                <div class="form-group">
+                    <label for="githubToken">GitHub Token *</label>
+                    <input type="password" id="githubToken" required 
+                           placeholder="输入您的GitHub Personal Access Token">
+                    <div class="token-info">
+                        <i class="fas fa-info-circle"></i> 
+                        需要具有repo权限的token。在GitHub Settings → Developer settings → Personal access tokens 中创建
+                    </div>
+                </div>
             </div>
             
             <div class="form-group">
-                <label>作者 *</label>
-                <input type="text" id="novelAuthor" required>
+                <label for="novelTitle">小说标题 *</label>
+                <input type="text" id="novelTitle" required placeholder="请输入小说标题">
             </div>
             
             <div class="form-group">
-                <label>小说简介 *</label>
-                <textarea id="novelDescription" required></textarea>
+                <label for="novelAuthor">作者 *</label>
+                <input type="text" id="novelAuthor" required placeholder="请输入作者名称">
             </div>
             
             <div class="form-group">
-                <label>标签（用逗号分隔）*</label>
-                <input type="text" id="novelTags" required>
+                <label for="novelDescription">小说简介 *</label>
+                <textarea id="novelDescription" required placeholder="请输入小说简介" rows="4"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="novelTags">标签 *</label>
+                <input type="text" id="novelTags" required placeholder="玄幻,仙侠,言情 (用逗号分隔)">
             </div>
             
             <div class="form-group">
                 <label>上传章节文件 *</label>
-                <input type="file" id="chapterFiles" multiple accept=".md" required>
-                <div id="fileList"></div>
+                <div class="file-upload-area" id="dropZone">
+                    <i class="fas fa-file-upload" style="font-size: 3rem; color: var(--secondary-color);"></i>
+                    <p>拖放文件到此处或点击选择文件</p>
+                    <p>支持多个.md文件同时上传</p>
+                    <input type="file" id="fileInput" multiple accept=".md" style="display: none;">
+                </div>
+                <div class="file-list" id="fileList"></div>
             </div>
             
-            <button type="submit" id="submitBtn">上传小说</button>
+            <button type="submit" class="submit-btn" id="submitBtn">
+                <i class="fas fa-paper-plane"></i> 上传小说
+            </button>
         </form>
     </div>
 
     <script>
-        class EnhancedUploader {
+        class GitHubNovelUploader {
             constructor() {
-                this.form = document.getElementById('uploadForm');
-                this.statusElement = document.getElementById('uploadStatus');
+                this.files = [];
+                this.uploading = false;
                 this.init();
             }
 
             init() {
-                this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+                this.setupEventListeners();
                 this.setupFilePreview();
+            }
+
+            setupEventListeners() {
+                const form = document.getElementById('uploadForm');
+                const dropZone = document.getElementById('dropZone');
+                const fileInput = document.getElementById('fileInput');
+
+                form.addEventListener('submit', (e) => this.handleSubmit(e));
+                dropZone.addEventListener('click', () => fileInput.click());
+                fileInput.addEventListener('change', (e) => this.handleFiles(e.target.files));
+
+                // 拖放功能
+                dropZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropZone.style.borderColor = '#d4af37';
+                    dropZone.style.background = 'rgba(212, 175, 55, 0.1)';
+                });
+
+                dropZone.addEventListener('dragleave', () => {
+                    dropZone.style.borderColor = '#ddd';
+                    dropZone.style.background = '';
+                });
+
+                dropZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropZone.style.borderColor = '#ddd';
+                    dropZone.style.background = '';
+                    this.handleFiles(e.dataTransfer.files);
+                });
+            }
+
+            setupFilePreview() {
+                const fileInput = document.getElementById('fileInput');
+                fileInput.addEventListener('change', () => {
+                    this.updateFileList();
+                });
+            }
+
+            handleFiles(fileList) {
+                for (let file of fileList) {
+                    if (file.name.endsWith('.md')) {
+                        if (file.size > 10 * 1024 * 1024) {
+                            this.showStatus('文件大小不能超过10MB: ' + file.name, 'error');
+                            continue;
+                        }
+
+                        if (!this.files.some(f => f.name === file.name && f.size === file.size)) {
+                            this.files.push(file);
+                        }
+                    } else {
+                        this.showStatus('请上传Markdown文件(.md): ' + file.name, 'error');
+                    }
+                }
+                this.updateFileList();
+            }
+
+            updateFileList() {
+                const fileList = document.getElementById('fileList');
+                fileList.innerHTML = '';
+
+                this.files.forEach((file, index) => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.innerHTML = `
+                        <span>${file.name}</span>
+                        <span>${this.formatFileSize(file.size)}</span>
+                        <button type="button" onclick="uploader.removeFile(${index})" 
+                                style="background: none; border: none; color: #ff4444; cursor: pointer;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                    fileList.appendChild(fileItem);
+                });
+            }
+
+            removeFile(index) {
+                this.files.splice(index, 1);
+                this.updateFileList();
             }
 
             async handleSubmit(e) {
                 e.preventDefault();
-                this.showStatus('开始处理上传...', 'processing');
                 
+                if (this.uploading) return;
+                
+                if (!this.validateForm()) return;
+
+                this.uploading = true;
+                this.showStatus('开始处理上传...', 'processing');
+                this.disableForm(true);
+
                 try {
-                    const formData = this.prepareFormData();
-                    await this.uploadNovel(formData);
+                    await this.uploadToGitHub();
                     this.showStatus('上传成功！系统正在处理您的文件...', 'success');
                     this.form.reset();
+                    this.files = [];
+                    this.updateFileList();
                     
-                    // 3秒后跳转到首页
                     setTimeout(() => {
                         window.location.href = 'index.html';
                     }, 3000);
                     
                 } catch (error) {
-                    this.showStatus(`上传失败: ${error.message}`, 'error');
+                    this.showStatus('上传失败: ' + error.message, 'error');
+                } finally {
+                    this.uploading = false;
+                    this.disableForm(false);
                 }
             }
 
-            prepareFormData() {
-                const formData = new FormData();
-                const files = document.getElementById('chapterFiles').files;
-                
-                if (files.length === 0) {
-                    throw new Error('请至少上传一个章节文件');
+            validateForm() {
+                const token = document.getElementById('githubToken').value.trim();
+                const title = document.getElementById('novelTitle').value.trim();
+                const author = document.getElementById('novelAuthor').value.trim();
+                const description = document.getElementById('novelDescription').value.trim();
+                const tags = document.getElementById('novelTags').value.trim();
+
+                if (!token) {
+                    this.showStatus('请输入GitHub Token', 'error');
+                    return false;
                 }
 
-                // 准备元数据
-                const metadata = {
-                    title: document.getElementById('novelTitle').value,
-                    author: document.getElementById('novelAuthor').value,
-                    description: document.getElementById('novelDescription').value,
-                    tags: document.getElementById('novelTags').value.split(',').map(tag => tag.trim()),
-                    timestamp: new Date().toISOString()
+                if (!title) {
+                    this.showStatus('请输入小说标题', 'error');
+                    return false;
+                }
+
+                if (!author) {
+                    this.showStatus('请输入作者名称', 'error');
+                    return false;
+                }
+
+                if (!description) {
+                    this.showStatus('请输入小说简介', 'error');
+                    return false;
+                }
+
+                if (!tags) {
+                    this.showStatus('请输入标签', 'error');
+                    return false;
+                }
+
+                if (this.files.length === 0) {
+                    this.showStatus('请至少上传一个章节文件', 'error');
+                    return false;
+                }
+
+                return true;
+            }
+
+            async uploadToGitHub() {
+                const token = document.getElementById('githubToken').value.trim();
+                const novelData = this.prepareNovelData();
+                
+                // 获取仓库信息
+                const repoInfo = this.getRepoInfo();
+                if (!repoInfo) {
+                    throw new Error('无法获取仓库信息');
+                }
+
+                // 创建小说目录和文件
+                await this.createNovelFiles(token, repoInfo, novelData);
+            }
+
+            prepareNovelData() {
+                const title = document.getElementById('novelTitle').value.trim();
+                const author = document.getElementById('novelAuthor').value.trim();
+                const description = document.getElementById('novelDescription').value.trim();
+                const tags = document.getElementById('novelTags').value.split(',').map(tag => tag.trim());
+
+                const novelSlug = this.createSlug(title);
+                const novelId = this.generateNovelId();
+
+                return {
+                    id: novelId,
+                    title: title,
+                    author: author,
+                    description: description,
+                    tags: tags,
+                    slug: novelSlug,
+                    cover: "📖",
+                    path: `novels/${novelSlug}`,
+                    chapters: this.prepareChapters(),
+                    updateTime: new Date().toISOString(),
+                    wordCount: this.calculateWordCount(),
+                    status: "连载中"
+                };
+            }
+
+            createSlug(title) {
+                return title.toLowerCase()
+                    .replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-|-$/g, '')
+                    .substring(0, 50);
+            }
+
+            generateNovelId() {
+                return Date.now();
+            }
+
+            prepareChapters() {
+                const chapters = [];
+                this.files.forEach((file, index) => {
+                    const wordCount = file.size; // 简化估算
+                    chapters.push({
+                        title: `第${index + 1}章`,
+                        file: `chapter${index + 1}.md`,
+                        wordCount: wordCount,
+                        readingTime: `${Math.ceil(wordCount / 500)}分钟`
+                    });
+                });
+                return chapters;
+            }
+
+            calculateWordCount() {
+                return this.files.reduce((total, file) => total + file.size, 0);
+            }
+
+            getRepoInfo() {
+                // 从当前URL提取仓库信息
+                const path = window.location.pathname.split('/');
+                if (path.length >= 3) {
+                    return {
+                        owner: path[1],
+                        repo: path[2].replace('.github.io', '')
+                    };
+                }
+                return null;
+            }
+
+            async createNovelFiles(token, repoInfo, novelData) {
+                const baseUrl = 'https://api.github.com';
+                const headers = {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
                 };
 
-                formData.append('metadata', JSON.stringify(metadata));
+                // 1. 获取当前SHA（用于创建提交）
+                const refResponse = await fetch(`${baseUrl}/repos/${repoInfo.owner}/${repoInfo.repo}/git/refs/heads/main`);
+                if (!refResponse.ok) {
+                    throw new Error('无法获取仓库引用，请检查token权限');
+                }
+                const refData = await refResponse.json();
+                const baseSha = refData.object.sha;
+
+                // 2. 获取基础树
+                const commitResponse = await fetch(`${baseUrl}/repos/${repoInfo.owner}/${repoInfo.repo}/git/commits/${baseSha}`);
+                const commitData = await commitResponse.json();
+                const baseTreeSha = commitData.tree.sha;
+
+                // 3. 创建新树（包含新文件）
+                const tree = await this.createTree(token, repoInfo, baseTreeSha, novelData);
                 
-                // 添加文件
-                for (let file of files) {
-                    formData.append('chapters', file);
+                // 4. 创建提交
+                const commitMessage = `添加小说: ${novelData.title}`;
+                const commitResponse = await fetch(`${baseUrl}/repos/${repoInfo.owner}/${repoInfo.repo}/git/commits`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        message: commitMessage,
+                        tree: tree.sha,
+                        parents: [baseSha]
+                    })
+                });
+                const commit = await commitResponse.json();
+
+                // 5. 更新引用
+                await fetch(`${baseUrl}/repos/${repoInfo.owner}/${repoInfo.repo}/git/refs/heads/main`, {
+                    method: 'PATCH',
+                    headers: headers,
+                    body: JSON.stringify({
+                        sha: commit.sha,
+                        force: false
+                    })
+                });
+            }
+
+            async createTree(token, repoInfo, baseTreeSha, novelData) {
+                const baseUrl = 'https://api.github.com';
+                const headers = {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                };
+
+                const tree = [];
+
+                // 添加小说信息文件
+                const infoContent = JSON.stringify(novelData, null, 2);
+                const infoBlob = await this.createBlob(token, repoInfo, infoContent);
+                tree.push({
+                    path: `novels/${novelData.slug}/info.json`,
+                    mode: '100644',
+                    type: 'blob',
+                    sha: infoBlob.sha
+                });
+
+                // 添加章节文件
+                for (let i = 0; i < this.files.length; i++) {
+                    const file = this.files[i];
+                    const content = await this.readFileAsText(file);
+                    const blob = await this.createBlob(token, repoInfo, content);
+                    tree.push({
+                        path: `novels/${novelData.slug}/chapter${i + 1}.md`,
+                        mode: '100644',
+                        type: 'blob',
+                        sha: blob.sha
+                    });
                 }
 
-                return formData;
+                // 创建树
+                const treeResponse = await fetch(`${baseUrl}/repos/${repoInfo.owner}/${repoInfo.repo}/git/trees`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        base_tree: baseTreeSha,
+                        tree: tree
+                    })
+                });
+
+                return await treeResponse.json();
             }
 
-            async uploadNovel(formData) {
-                // 这里应该是实际的上传端点
-                // 由于GitHub Pages是静态托管，我们使用GitHub API直接提交
-                await this.submitViaGitHubAPI(formData);
+            async createBlob(token, repoInfo, content) {
+                const baseUrl = 'https://api.github.com';
+                const response = await fetch(`${baseUrl}/repos/${repoInfo.owner}/${repoInfo.repo}/git/blobs`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content: btoa(unescape(encodeURIComponent(content))),
+                        encoding: 'base64'
+                    })
+                });
+                return await response.json();
             }
 
-            async submitViaGitHubAPI(formData) {
-                // 模拟API调用 - 实际实现需要GitHub API集成
-                return new Promise((resolve) => {
-                    setTimeout(() => {
-                        console.log('上传处理完成');
-                        resolve();
-                    }, 2000);
+            readFileAsText(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = e => resolve(e.target.result);
+                    reader.onerror = reject;
+                    reader.readAsText(file);
                 });
             }
 
             showStatus(message, type) {
-                this.statusElement.textContent = message;
-                this.statusElement.className = `upload-status status-${type}`;
-                this.statusElement.style.display = 'block';
+                const statusElement = document.getElementById('statusMessage');
+                statusElement.textContent = message;
+                statusElement.className = `status-message status-${type}`;
+                statusElement.style.display = 'block';
             }
 
-            setupFilePreview() {
-                const fileInput = document.getElementById('chapterFiles');
-                const fileList = document.getElementById('fileList');
-                
-                fileInput.addEventListener('change', () => {
-                    fileList.innerHTML = '';
-                    for (let file of fileInput.files) {
-                        const fileItem = document.createElement('div');
-                        fileItem.className = 'file-item';
-                        fileItem.textContent = `${file.name} (${this.formatFileSize(file.size)})`;
-                        fileList.appendChild(fileItem);
-                    }
+            disableForm(disabled) {
+                const inputs = document.querySelectorAll('#uploadForm input, #uploadForm textarea, #uploadForm button');
+                inputs.forEach(input => {
+                    input.disabled = disabled;
                 });
+                
+                const submitBtn = document.getElementById('submitBtn');
+                if (disabled) {
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上传中...';
+                    submitBtn.style.opacity = '0.6';
+                } else {
+                    submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 上传小说';
+                    submitBtn.style.opacity = '1';
+                }
             }
 
             formatFileSize(bytes) {
@@ -188,7 +618,7 @@
         }
 
         // 初始化上传器
-        new EnhancedUploader();
+        const uploader = new GitHubNovelUploader();
     </script>
 </body>
 </html>
