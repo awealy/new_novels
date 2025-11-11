@@ -4,284 +4,512 @@ on:
   push:
     paths:
       - 'uploads/pending/**'
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 env:
-  NODE_VERSION: '18'
   PYTHON_VERSION: '3.10'
+  NODE_VERSION: '18'
 
 jobs:
   validate-and-process:
     name: 验证并处理上传
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     
     steps:
-      - name: 检出代码（包含上传文件）
+      - name: 检查工作流权限
+        run: |
+          echo "🔍 检查工作流权限和环境..."
+          echo "运行器: ${{ runner.os }}"
+          echo "工作空间: ${{ github.workspace }}"
+          echo "触发事件: ${{ github.event_name }}"
+          
+      - name: 检出代码
+        id: checkout
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
-
+          ref: ${{ github.ref }}
+          
+      - name: 验证仓库状态
+        run: |
+          echo "📁 工作目录内容:"
+          ls -la
+          echo "📁 uploads目录状态:"
+          if [ -d "uploads" ]; then
+            find uploads -type f -name "*.json" -o -name "*.md" | head -10
+          else
+            echo "⚠️ uploads目录不存在"
+          fi
+          
       - name: 设置Python环境
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: 验证和处理上传
-        id: process
+          
+      - name: 安装依赖
         run: |
-          python << 'EOF'
+          python -m pip install --upgrade pip
+          pip install pyyaml
+          
+      - name: 创建处理脚本
+        id: create-script
+        run: |
+          cat > process_upload.py << 'EOF'
+          #!/usr/bin/env python3
+          """
+          小说上传处理脚本 - 增强错误处理版本
+          """
+          
           import os
+          import sys
           import json
           import shutil
           import hashlib
-          import yaml
+          import traceback
           from datetime import datetime
-          import sys
-
-          class RobustNovelProcessor:
+          from pathlib import Path
+          
+          class UploadProcessor:
               def __init__(self):
-                  self.uploads_dir = "uploads/pending"
-                  self.novels_dir = "novels"
-                  self.processed_dir = "uploads/processed"
-                  self.failed_dir = "uploads/failed"
-                  self.backup_dir = "backups"
+                  self.base_dir = Path.cwd()
+                  self.uploads_dir = self.base_dir / "uploads" / "pending"
+                  self.novels_dir = self.base_dir / "novels"
+                  self.processed_dir = self.base_dir / "uploads" / "processed"
+                  self.failed_dir = self.base_dir / "uploads" / "failed"
+                  self.backup_dir = self.base_dir / "backups"
+                  self.log_file = self.base_dir / "upload_process.log"
                   
-              def ensure_directories(self):
-                  """确保所有必要的目录存在"""
-                  for directory in [self.novels_dir, self.processed_dir, 
-                                   self.failed_dir, self.backup_dir]:
-                      os.makedirs(directory, exist_ok=True)
-                  print("✅ 目录结构验证完成")
+              def setup_directories(self):
+                  """创建必要的目录结构"""
+                  try:
+                      for directory in [self.novels_dir, self.processed_dir, 
+                                       self.failed_dir, self.backup_dir]:
+                          directory.mkdir(parents=True, exist_ok=True)
+                      self.log("✅ 目录结构初始化完成")
+                      return True
+                  except Exception as e:
+                      self.log(f"❌ 目录创建失败: {e}")
+                      return False
                   
-              def create_backup(self):
-                  """创建当前状态的备份"""
-                  timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                  backup_file = f"{self.backup_dir}/backup_{timestamp}.zip"
-                  # 这里可以添加备份逻辑
-                  print(f"📦 创建备份: {backup_file}")
+              def log(self, message):
+                  """记录日志"""
+                  timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                  log_entry = f"[{timestamp}] {message}"
+                  print(log_entry)
                   
-              def validate_upload(self, upload_path):
-                  """验证上传内容的完整性"""
-                  required_files = ['metadata.json']
-                  md_files = [f for f in os.listdir(upload_path) 
-                            if f.endswith('.md') and f != 'metadata.json']
-                  
-                  if not md_files:
-                      raise ValueError("未找到Markdown章节文件")
+                  with open(self.log_file, 'a', encoding='utf-8') as f:
+                      f.write(log_entry + '\\n')
                       
-                  for req_file in required_files:
-                      if not os.path.exists(os.path.join(upload_path, req_file)):
-                          raise ValueError(f"缺少必要文件: {req_file}")
+              def validate_environment(self):
+                  """验证运行环境"""
+                  self.log("🔍 验证运行环境...")
                   
-                  print(f"✅ 上传验证通过，找到 {len(md_files)} 个章节文件")
+                  # 检查必要目录
+                  if not self.uploads_dir.exists():
+                      self.log("⚠️ uploads/pending目录不存在")
+                      return False
+                      
+                  # 检查Git配置
+                  try:
+                      import subprocess
+                      result = subprocess.run(['git', 'status'], capture_output=True, text=True)
+                      if result.returncode != 0:
+                          self.log("❌ Git环境异常")
+                          return False
+                  except Exception as e:
+                      self.log(f"❌ Git检查失败: {e}")
+                      return False
+                      
+                  self.log("✅ 环境验证通过")
                   return True
                   
-              def generate_novel_id(self):
-                  """生成唯一的小说ID"""
-                  novels_index = "novels.json"
-                  if os.path.exists(novels_index):
-                      with open(novels_index, 'r', encoding='utf-8') as f:
-                          data = json.load(f)
-                          existing_ids = [n.get('id', 0) for n in data.get('novels', [])]
-                          return max(existing_ids) + 1 if existing_ids else 1
-                  return 1
+              def backup_index(self):
+                  """备份当前索引文件"""
+                  index_file = self.base_dir / "novels.json"
+                  if index_file.exists():
+                      timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                      backup_file = self.backup_dir / f"index_backup_{timestamp}.json"
+                      try:
+                          shutil.copy2(index_file, backup_file)
+                          self.log(f"📦 索引备份创建: {backup_file}")
+                          return True
+                      except Exception as e:
+                          self.log(f"⚠️ 备份创建失败: {e}")
+                  else:
+                      self.log("ℹ️ 无现有索引文件需要备份")
+                  return False
+                  
+              def scan_pending_uploads(self):
+                  """扫描待处理的上传"""
+                  if not self.uploads_dir.exists():
+                      self.log("📭 无待处理的上传目录")
+                      return []
+                      
+                  upload_items = []
+                  for item in self.uploads_dir.iterdir():
+                      if item.is_dir():
+                          metadata_file = item / "metadata.json"
+                          if metadata_file.exists():
+                              upload_items.append(item.name)
+                          else:
+                              self.log(f"⚠️ 跳过无效上传目录: {item.name} (缺少metadata.json)")
+                              
+                  self.log(f"🔍 发现 {len(upload_items)} 个待处理上传")
+                  return upload_items
                   
               def process_upload(self, upload_id):
                   """处理单个上传"""
-                  upload_path = os.path.join(self.uploads_dir, upload_id)
+                  upload_path = self.uploads_dir / upload_id
                   
                   try:
-                      print(f"🔍 开始处理: {upload_id}")
+                      self.log(f"🚀 开始处理: {upload_id}")
                       
-                      # 验证上传
-                      self.validate_upload(upload_path)
-                      
+                      # 验证上传完整性
+                      if not self.validate_upload(upload_path):
+                          raise ValueError("上传验证失败")
+                          
                       # 读取元数据
-                      with open(os.path.join(upload_path, 'metadata.json'), 'r', encoding='utf-8') as f:
-                          metadata = json.load(f)
-                      
+                      metadata = self.load_metadata(upload_path)
+                      if not metadata:
+                          raise ValueError("元数据读取失败")
+                          
                       # 生成小说信息
-                      novel_id = self.generate_novel_id()
-                      novel_slug = self.create_slug(metadata['title'])
+                      novel_info = self.create_novel_info(metadata, upload_path)
                       
-                      # 处理章节
-                      chapters = self.process_chapters(upload_path, novel_slug)
+                      # 创建小说目录
+                      novel_dir = self.novels_dir / novel_info['slug']
+                      if novel_dir.exists():
+                          raise ValueError(f"小说目录已存在: {novel_info['slug']}")
+                          
+                      novel_dir.mkdir(parents=True)
                       
-                      novel_info = {
-                          'id': novel_id,
-                          'slug': novel_slug,
-                          'title': metadata['title'],
-                          'author': metadata['author'],
-                          'description': metadata.get('description', ''),
-                          'tags': metadata.get('tags', []),
-                          'cover': metadata.get('cover', '📖'),
-                          'chapters': chapters,
-                          'wordCount': sum(chap.get('wordCount', 0) for chap in chapters),
-                          'chapterCount': len(chapters),
-                          'status': '连载中',
-                          'createdAt': datetime.now().isoformat(),
-                          'updatedAt': datetime.now().isoformat()
-                      }
+                      # 处理章节文件
+                      chapters = self.process_chapters(upload_path, novel_dir)
+                      novel_info['chapters'] = chapters
+                      novel_info['wordCount'] = sum(c.get('wordCount', 0) for c in chapters)
+                      novel_info['chapterCount'] = len(chapters)
                       
-                      # 保存小说数据
-                      self.save_novel(novel_slug, novel_info, upload_path)
+                      # 保存小说信息
+                      self.save_novel_info(novel_dir, novel_info)
                       
                       # 更新主索引
                       self.update_main_index(novel_info)
                       
                       # 移动处理完成的文件
-                      processed_path = os.path.join(self.processed_dir, upload_id)
-                      shutil.move(upload_path, processed_path)
+                      self.move_to_processed(upload_path, upload_id)
                       
-                      print(f"✅ 成功处理: {metadata['title']} (ID: {novel_id})")
+                      self.log(f"✅ 成功处理: {novel_info['title']}")
                       return True
                       
                   except Exception as e:
-                      print(f"❌ 处理失败 {upload_id}: {str(e)}")
-                      # 移动到失败目录
-                      failed_path = os.path.join(self.failed_dir, upload_id)
-                      shutil.move(upload_path, failed_path)
+                      self.log(f"❌ 处理失败 {upload_id}: {e}")
+                      self.log(f"🔍 错误详情: {traceback.format_exc()}")
+                      self.move_to_failed(upload_path, upload_id, str(e))
                       return False
                       
-              def process_chapters(self, upload_path, novel_slug):
-                  """处理章节文件"""
-                  chapters = []
-                  md_files = []
+              def validate_upload(self, upload_path):
+                  """验证上传完整性"""
+                  required_files = ['metadata.json']
                   
-                  for file in os.listdir(upload_path):
-                      if file.endswith('.md') and file != 'metadata.json':
-                          md_files.append(file)
-                  
-                  # 按文件名排序
-                  md_files.sort()
-                  
-                  for i, filename in enumerate(md_files, 1):
-                      file_path = os.path.join(upload_path, filename)
+                  for req_file in required_files:
+                      if not (upload_path / req_file).exists():
+                          raise ValueError(f"缺少必要文件: {req_file}")
+                          
+                  # 检查章节文件
+                  md_files = list(upload_path.glob("*.md"))
+                  if not md_files:
+                      raise ValueError("未找到Markdown章节文件")
                       
-                      with open(file_path, 'r', encoding='utf-8') as f:
-                          content = f.read()
+                  self.log(f"✅ 上传验证通过，找到 {len(md_files)} 个章节文件")
+                  return True
+                  
+              def load_metadata(self, upload_path):
+                  """加载元数据"""
+                  metadata_file = upload_path / "metadata.json"
+                  try:
+                      with open(metadata_file, 'r', encoding='utf-8') as f:
+                          metadata = json.load(f)
+                          
+                      required_fields = ['title', 'author', 'description', 'tags']
+                      for field in required_fields:
+                          if field not in metadata:
+                              raise ValueError(f"元数据缺少字段: {field}")
+                              
+                      return metadata
+                  except Exception as e:
+                      raise ValueError(f"元数据读取失败: {e}")
                       
-                      # 提取标题和元数据
-                      title = self.extract_chapter_title(content, filename, i)
-                      word_count = len(content.strip())
-                      
-                      chapters.append({
-                          'number': i,
-                          'title': title,
-                          'filename': f"chapter{i}.md",
-                          'wordCount': word_count,
-                          'readingTime': f"{max(1, word_count // 500)}分钟"
-                      })
+              def create_novel_info(self, metadata, upload_path):
+                  """创建小说信息"""
+                  novel_id = self.generate_novel_id()
+                  novel_slug = self.create_slug(metadata['title'])
                   
-                  return chapters
+                  return {
+                      'id': novel_id,
+                      'title': metadata['title'],
+                      'author': metadata['author'],
+                      'description': metadata['description'],
+                      'tags': metadata['tags'] if isinstance(metadata['tags'], list) else [metadata['tags']],
+                      'cover': metadata.get('cover', '📖'),
+                      'slug': novel_slug,
+                      'path': f'novels/{novel_slug}',
+                      'updateTime': datetime.now().isoformat(),
+                      'status': '连载中'
+                  }
                   
-              def save_novel(self, novel_slug, novel_info, upload_path):
-                  """保存小说数据"""
-                  novel_dir = os.path.join(self.novels_dir, novel_slug)
-                  os.makedirs(novel_dir, exist_ok=True)
-                  
-                  # 保存info.json
-                  with open(os.path.join(novel_dir, 'info.json'), 'w', encoding='utf-8') as f:
-                      json.dump(novel_info, f, ensure_ascii=False, indent=2)
-                  
-                  # 复制章节文件
-                  for i, chapter in enumerate(novel_info['chapters'], 1):
-                      original_file = os.path.join(upload_path, 
-                                                 f"{[f for f in os.listdir(upload_path) 
-                                                    if f.endswith('.md') and f != 'metadata.json'][i-1]}")
-                      target_file = os.path.join(novel_dir, chapter['filename'])
-                      shutil.copy2(original_file, target_file)
-                  
-                  print(f"💾 小说数据保存到: {novel_dir}")
-                  
-              def update_main_index(self, novel_info):
-                  """更新主索引文件"""
-                  index_file = "novels.json"
-                  
-                  if os.path.exists(index_file):
-                      with open(index_file, 'r', encoding='utf-8') as f:
-                          data = json.load(f)
-                  else:
-                      data = {'version': '2.0', 'novels': [], 'lastUpdated': ''}
-                  
-                  # 移除重复ID的小说
-                  data['novels'] = [n for n in data['novels'] if n.get('id') != novel_info['id']]
-                  data['novels'].append(novel_info)
-                  data['novels'].sort(key=lambda x: x.get('id', 0))
-                  data['lastUpdated'] = datetime.now().isoformat()
-                  
-                  with open(index_file, 'w', encoding='utf-8') as f:
-                      json.dump(data, f, ensure_ascii=False, indent=2)
-                  
-                  print("📚 主索引更新完成")
+              def generate_novel_id(self):
+                  """生成小说ID"""
+                  index_file = self.base_dir / "novels.json"
+                  if index_file.exists():
+                      try:
+                          with open(index_file, 'r', encoding='utf-8') as f:
+                              data = json.load(f)
+                              novels = data.get('novels', [])
+                              if novels:
+                                  existing_ids = [n.get('id', 0) for n in novels if n.get('id')]
+                                  return max(existing_ids) + 1 if existing_ids else 1
+                      except Exception as e:
+                          self.log(f"⚠️ 读取索引失败: {e}")
+                  return 1
                   
               def create_slug(self, title):
                   """生成URL友好的slug"""
                   import re
-                  slug = re.sub(r'[^\w\s-]', '', title.lower())
-                  slug = re.sub(r'[-\s]+', '-', slug)
+                  slug = re.sub(r'[^\\w\\s-]', '', title.lower())
+                  slug = re.sub(r'[-\\s]+', '-', slug)
                   return slug[:50]
                   
+              def process_chapters(self, upload_path, novel_dir):
+                  """处理章节文件"""
+                  chapters = []
+                  md_files = sorted([f for f in upload_path.glob("*.md") if f.name != "metadata.json"])
+                  
+                  for i, md_file in enumerate(md_files, 1):
+                      try:
+                          with open(md_file, 'r', encoding='utf-8') as f:
+                              content = f.read()
+                              
+                          word_count = len(content.strip())
+                          reading_time = max(1, word_count // 500)
+                          
+                          # 提取标题
+                          title = self.extract_chapter_title(content, md_file.name, i)
+                          
+                          # 复制文件
+                          chapter_file = f"chapter{i}.md"
+                          target_path = novel_dir / chapter_file
+                          shutil.copy2(md_file, target_path)
+                          
+                          chapters.append({
+                              'number': i,
+                              'title': title,
+                              'file': chapter_file,
+                              'wordCount': word_count,
+                              'readingTime': f'{reading_time}分钟'
+                          })
+                          
+                      except Exception as e:
+                          self.log(f"⚠️ 处理章节失败 {md_file.name}: {e}")
+                          continue
+                          
+                  return chapters
+                  
               def extract_chapter_title(self, content, filename, chapter_num):
-                  """从内容中提取章节标题"""
-                  first_line = content.strip().split('\n')[0] if content.strip() else ""
-                  title = first_line.replace('#', '').strip()
+                  """提取章节标题"""
+                  if not content.strip():
+                      return f"第{chapter_num}章"
+                      
+                  first_line = content.strip().split('\\n')[0]
+                  title = re.sub(r'^#+\\s*', '', first_line).strip()
                   
                   if title and len(title) < 100:
                       return title
-                  
-                  base_name = os.path.splitext(filename)[0]
+                      
+                  base_name = Path(filename).stem
                   if base_name and base_name != filename:
                       return base_name
                       
                   return f"第{chapter_num}章"
-          
-          # 执行处理
-          processor = RobustNovelProcessor()
-          processor.ensure_directories()
-          processor.create_backup()
-          
-          success_count = 0
-          fail_count = 0
-          
-          if os.path.exists(processor.uploads_dir):
-              for item in os.listdir(processor.uploads_dir):
-                  item_path = os.path.join(processor.uploads_dir, item)
-                  if os.path.isdir(item_path):
-                      if processor.process_upload(item):
+                  
+              def save_novel_info(self, novel_dir, novel_info):
+                  """保存小说信息"""
+                  info_file = novel_dir / "info.json"
+                  try:
+                      with open(info_file, 'w', encoding='utf-8') as f:
+                          json.dump(novel_info, f, ensure_ascii=False, indent=2)
+                      self.log(f"💾 小说信息保存: {info_file}")
+                  except Exception as e:
+                      raise ValueError(f"保存小说信息失败: {e}")
+                      
+              def update_main_index(self, novel_info):
+                  """更新主索引"""
+                  index_file = self.base_dir / "novels.json"
+                  
+                  if index_file.exists():
+                      try:
+                          with open(index_file, 'r', encoding='utf-8') as f:
+                              data = json.load(f)
+                      except Exception as e:
+                          self.log(f"⚠️ 读取索引失败，创建新索引: {e}")
+                          data = {'version': '2.0', 'novels': []}
+                  else:
+                      data = {'version': '2.0', 'novels': []}
+                      
+                  # 移除重复ID
+                  data['novels'] = [n for n in data['novels'] if n.get('id') != novel_info['id']]
+                  data['novels'].append(novel_info)
+                  data['novels'].sort(key=lambda x: x.get('id', 0))
+                  
+                  # 更新统计信息
+                  data['lastUpdated'] = datetime.now().isoformat()
+                  data['totalNovels'] = len(data['novels'])
+                  data['totalChapters'] = sum(len(n.get('chapters', [])) for n in data['novels'])
+                  data['totalWords'] = sum(n.get('wordCount', 0) for n in data['novels'])
+                  
+                  try:
+                      with open(index_file, 'w', encoding='utf-8') as f:
+                          json.dump(data, f, ensure_ascii=False, indent=2)
+                      self.log("📚 主索引更新完成")
+                  except Exception as e:
+                      raise ValueError(f"保存索引失败: {e}")
+                      
+              def move_to_processed(self, upload_path, upload_id):
+                  """移动到已处理目录"""
+                  processed_path = self.processed_dir / upload_id
+                  if upload_path.exists():
+                      shutil.move(upload_path, processed_path)
+                      self.log(f"📁 移动到已处理: {processed_path}")
+                      
+              def move_to_failed(self, upload_path, upload_id, error_msg):
+                  """移动到失败目录"""
+                  failed_path = self.failed_dir / upload_id
+                  if upload_path.exists():
+                      shutil.move(upload_path, failed_path)
+                      
+                      # 记录错误信息
+                      error_log = {
+                          'upload_id': upload_id,
+                          'error_time': datetime.now().isoformat(),
+                          'error_message': error_msg
+                      }
+                      
+                      error_file = failed_path / 'error.json'
+                      with open(error_file, 'w', encoding='utf-8') as f:
+                          json.dump(error_log, f, indent=2)
+                          
+                      self.log(f"❌ 移动到失败目录: {failed_path}")
+                      
+              def run(self):
+                  """主运行方法"""
+                  self.log("🎬 开始小说上传处理流程")
+                  
+                  # 环境设置
+                  if not self.setup_directories():
+                      return False, 0, 0
+                      
+                  if not self.validate_environment():
+                      return False, 0, 0
+                      
+                  # 备份和扫描
+                  self.backup_index()
+                  upload_items = self.scan_pending_uploads()
+                  
+                  if not upload_items:
+                      self.log("📭 无待处理的上传")
+                      return True, 0, 0
+                      
+                  # 处理上传
+                  success_count = 0
+                  fail_count = 0
+                  
+                  for upload_id in upload_items:
+                      if self.process_upload(upload_id):
                           success_count += 1
                       else:
                           fail_count += 1
-          else:
-              print("📭 无待处理的上传")
-          
-          print(f"📊 处理结果: 成功 {success_count}, 失败 {fail_count}")
-          
-          # 设置输出变量
-          if fail_count > 0:
-              sys.exit(1)
+                          
+                  self.log(f"📊 处理完成: 成功 {success_count}, 失败 {fail_count}")
+                  return True, success_count, fail_count
+                  
+          if __name__ == "__main__":
+              processor = UploadProcessor()
+              success, success_count, fail_count = processor.run()
+              
+              # 设置退出码
+              if not success or fail_count > 0:
+                  sys.exit(1)
+              else:
+                  sys.exit(0)
           EOF
-
+          
+          echo "脚本创建完成"
+          chmod +x process_upload.py
+          
+      - name: 执行上传处理
+        id: process
+        run: |
+          echo "🚀 开始执行上传处理..."
+          python process_upload.py
+          exit_code=$?
+          echo "处理完成，退出码: $exit_code"
+          
+          if [ $exit_code -eq 0 ]; then
+            echo "::set-output name=status::success"
+            echo "::set-output name=success_count::$(grep -c "成功处理" upload_process.log || echo 0)"
+            echo "::set-output name=fail_count::$(grep -c "处理失败" upload_process.log || echo 0)"
+          else
+            echo "::set-output name=status::failed"
+            echo "::set-output name=success_count::0"
+            echo "::set-output name=fail_count::1"
+          fi
+          
+      - name: 查看处理日志
+        if: always()
+        run: |
+          echo "📋 处理日志:"
+          if [ -f "upload_process.log" ]; then
+            cat upload_process.log
+          else
+            echo "⚠️ 未找到处理日志文件"
+          fi
+          
       - name: 提交更改
         if: always()
         run: |
-          git config --local user.name "GitHub Actions"
-          git config --local user.email "actions@github.com"
+          echo "💾 准备提交更改..."
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # 添加所有更改的文件
           git add .
+          
           if git diff --staged --quiet; then
-            echo "无更改需要提交"
+            echo "📭 无更改需要提交"
           else
-            git commit -m "自动处理小说上传 - $(date +"%Y-%m-%d %H:%M:%S")"
-            git push
+            git status
+            git commit -m "自动处理小说上传 - $(date +'%Y-%m-%d %H:%M:%S')"
+            git push origin ${{ github.ref }}
+            echo "✅ 更改已提交"
           fi
-
-      - name: 触发页面部署
-        if: success()
+          
+      - name: 上传处理日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upload-process-logs
+          path: |
+            upload_process.log
+            uploads/failed/
+            backups/
+          retention-days: 7
+          
+      - name: 触发重新部署
+        if: steps.process.outputs.status == 'success'
         run: |
-          echo "触发GitHub Pages部署..."
+          echo "🚀 触发页面重新部署..."
           # 这里可以添加触发部署的逻辑
 
   deploy-pages:
@@ -301,7 +529,7 @@ jobs:
         uses: actions/configure-pages@v4
         
       - name: 上传制品
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: .
           
