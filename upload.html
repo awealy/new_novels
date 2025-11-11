@@ -1,491 +1,94 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>小说上传 - 同人文网站</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .upload-container {
-            max-width: 800px;
-            margin: 100px auto 50px;
-            padding: 2rem;
-            background: var(--card-bg);
-            border-radius: 10px;
-            box-shadow: var(--shadow);
-        }
-
-        .upload-header {
-            text-align: center;
-            margin-bottom: 2rem;
-            border-bottom: 2px solid var(--secondary-color);
-            padding-bottom: 1rem;
-        }
-
-        .upload-header h1 {
-            color: var(--primary-color);
-            font-family: 'Ma Shan Zheng', cursive;
-            font-size: 2.5rem;
-        }
-
-        .upload-form {
-            display: grid;
-            gap: 1.5rem;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .form-group label {
-            font-weight: bold;
-            color: var(--primary-color);
-        }
-
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 1rem;
-            font-family: 'Noto Serif SC', serif;
-        }
-
-        .form-group textarea {
-            min-height: 100px;
-            resize: vertical;
-        }
-
-        .file-upload {
-            border: 2px dashed #ddd;
-            border-radius: 5px;
-            padding: 2rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .file-upload:hover {
-            border-color: var(--secondary-color);
-        }
-
-        .file-upload.dragover {
-            border-color: var(--primary-color);
-            background: rgba(197, 61, 61, 0.05);
-        }
-
-        .file-upload i {
-            font-size: 3rem;
-            color: var(--secondary-color);
-            margin-bottom: 1rem;
-        }
-
-        .file-list {
-            margin-top: 1rem;
-        }
-
-        .file-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            background: #f9f9f9;
-            border-radius: 5px;
-            margin-bottom: 5px;
-        }
-
-        .file-name {
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .file-size {
-            color: #666;
-            font-size: 0.9rem;
-            margin-left: 1rem;
-        }
-
-        .remove-file {
-            color: #ff4444;
-            cursor: pointer;
-            margin-left: 1rem;
-        }
-
-        .submit-btn {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 5px;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: background 0.3s;
-            margin-top: 1rem;
-        }
-
-        .submit-btn:hover {
-            background: #a83232;
-        }
-
-        .submit-btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 4px;
-            background: #f0f0f0;
-            border-radius: 2px;
-            margin-top: 1rem;
-            overflow: hidden;
-            display: none;
-        }
-
-        .progress {
-            height: 100%;
-            background: var(--secondary-color);
-            width: 0%;
-            transition: width 0.3s;
-        }
-
-        .status-message {
-            margin-top: 1rem;
-            padding: 10px;
-            border-radius: 5px;
-            display: none;
-        }
-
-        .status-message.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .status-message.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .instructions {
-            background: #f0f7ff;
-            border-left: 4px solid var(--secondary-color);
-            padding: 1rem;
-            margin: 2rem 0;
-            border-radius: 0 5px 5px 0;
-        }
-
-        .instructions h3 {
-            color: var(--primary-color);
-            margin-bottom: 0.5rem;
-        }
-
-        .instructions ul {
-            margin-left: 1rem;
-        }
-
-        .instructions li {
-            margin-bottom: 0.5rem;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>上传小说 - 自动触发部署</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+body { font-family: "Noto Serif SC", serif; background:#fafafa; padding:2rem; }
+.container { max-width:700px; margin:auto; background:white; padding:2rem; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
+h1 { color:#c33; text-align:center; }
+button { background:#c33; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; }
+.status { margin-top:1rem; padding:1rem; border-radius:5px; }
+.success { background:#d4edda; color:#155724; }
+.error { background:#f8d7da; color:#721c24; }
+</style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-logo">
-                <i class="fas fa-dragon"></i>
-                <span>同人文网站</span>
-            </div>
-            <div class="nav-links">
-                <a href="index.html">首页</a>
-                <a href="upload.html" class="active">上传小说</a>
-                <a href="#about">关于</a>
-            </div>
-        </div>
-    </nav>
+<div class="container">
+  <h1><i class="fas fa-cloud-upload-alt"></i> 小说上传</h1>
+  <p>上传 Markdown 文件，将自动触发 GitHub Actions 处理</p>
 
-    <div class="upload-container">
-        <div class="upload-header">
-            <h1><i class="fas fa-cloud-upload-alt"></i> 小说上传</h1>
-            <p>上传您的Markdown格式小说，系统将自动处理并部署到网站</p>
-        </div>
+  <label>小说标题：</label>
+  <input id="title" type="text" style="width:100%;padding:8px;margin-bottom:10px" placeholder="请输入标题">
 
-        <div class="instructions">
-            <h3><i class="fas fa-info-circle"></i> 上传说明</h3>
-            <ul>
-                <li>支持上传Markdown格式(.md)文件</li>
-                <li>单个文件大小限制：10MB</li>
-                <li>系统将自动生成索引和元数据</li>
-                <li>上传后需要几分钟处理时间，请耐心等待</li>
-            </ul>
-        </div>
+  <label>作者：</label>
+  <input id="author" type="text" style="width:100%;padding:8px;margin-bottom:10px" placeholder="请输入作者">
 
-        <form id="uploadForm" class="upload-form">
-            <div class="form-group">
-                <label for="novelTitle">小说标题 *</label>
-                <input type="text" id="novelTitle" name="novelTitle" required placeholder="请输入小说标题">
-            </div>
+  <label>上传章节文件（.md）：</label>
+  <input id="fileInput" type="file" accept=".md" multiple style="margin-bottom:10px">
 
-            <div class="form-group">
-                <label for="novelAuthor">作者 *</label>
-                <input type="text" id="novelAuthor" name="novelAuthor" required placeholder="请输入作者名称">
-            </div>
+  <button id="uploadBtn">上传并触发部署</button>
+  <div id="status" class="status"></div>
+</div>
 
-            <div class="form-group">
-                <label for="novelDescription">小说简介 *</label>
-                <textarea id="novelDescription" name="novelDescription" required placeholder="请输入小说简介，至少50字"></textarea>
-            </div>
+<script>
+const uploadBtn = document.getElementById("uploadBtn");
+uploadBtn.addEventListener("click", async () => {
+  const files = document.getElementById("fileInput").files;
+  const title = document.getElementById("title").value.trim();
+  const author = document.getElementById("author").value.trim();
+  const status = document.getElementById("status");
+  
+  if (!title || !author || files.length === 0) {
+    status.innerHTML = "❌ 请填写完整信息并选择文件";
+    status.className = "status error";
+    return;
+  }
 
-            <div class="form-group">
-                <label for="novelTags">标签 *</label>
-                <input type="text" id="novelTags" name="novelTags" required placeholder="使用逗号分隔，如：玄幻,仙侠,热血">
-            </div>
+  // ⚠️ 你的 GitHub 仓库配置
+  const owner = "awealy";
+  const repo = "new_novels";
+  const branch = "main";
+  const token = "在这里粘贴你的Token"; // ⚠️仅测试用，正式部署前必须隐藏！
 
-            <div class="form-group">
-                <label>上传章节文件 *</label>
-                <div class="file-upload" id="dropZone">
-                    <i class="fas fa-file-upload"></i>
-                    <p>拖放文件到此处或点击选择文件</p>
-                    <p class="file-hint">支持多个.md文件同时上传</p>
-                    <input type="file" id="fileInput" multiple accept=".md" style="display: none;">
-                </div>
-                <div class="file-list" id="fileList"></div>
-            </div>
+  status.innerHTML = "⏳ 正在上传文件...";
+  status.className = "status";
 
-            <button type="submit" class="submit-btn" id="submitBtn">
-                <i class="fas fa-paper-plane"></i> 上传并部署
-            </button>
+  for (const file of files) {
+    const content = await file.text();
+    const encoded = btoa(unescape(encodeURIComponent(content)));
+    const timestamp = Date.now();
+    const path = `uploads/pending/${timestamp}_${file.name}`;
 
-            <div class="progress-bar" id="progressBar">
-                <div class="progress" id="progress"></div>
-            </div>
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: `上传小说: ${file.name} (${title}) by ${author}`,
+        content: encoded,
+        branch
+      })
+    });
 
-            <div class="status-message" id="statusMessage"></div>
-        </form>
-    </div>
+    const data = await response.json();
+    if (response.ok) {
+      status.innerHTML = `✅ 已上传 ${file.name}，GitHub Actions 将自动运行。`;
+      status.className = "status success";
+    } else {
+      status.innerHTML = `❌ 上传失败: ${data.message}`;
+      status.className = "status error";
+      console.error(data);
+      return;
+    }
+  }
 
-    <script>
-        class NovelUploader {
-            constructor() {
-                this.files = [];
-                this.init();
-            }
-
-            init() {
-                this.setupEventListeners();
-            }
-
-            setupEventListeners() {
-                const dropZone = document.getElementById('dropZone');
-                const fileInput = document.getElementById('fileInput');
-                const fileList = document.getElementById('fileList');
-                const form = document.getElementById('uploadForm');
-
-                // 点击选择文件
-                dropZone.addEventListener('click', () => {
-                    fileInput.click();
-                });
-
-                // 文件选择变化
-                fileInput.addEventListener('change', (e) => {
-                    this.handleFiles(e.target.files);
-                });
-
-                // 拖放功能
-                dropZone.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    dropZone.classList.add('dragover');
-                });
-
-                dropZone.addEventListener('dragleave', () => {
-                    dropZone.classList.remove('dragover');
-                });
-
-                dropZone.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    dropZone.classList.remove('dragover');
-                    this.handleFiles(e.dataTransfer.files);
-                });
-
-                // 表单提交
-                form.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    this.submitForm();
-                });
-            }
-
-            handleFiles(fileList) {
-                for (let file of fileList) {
-                    if (file.type === '' || file.name.endsWith('.md')) {
-                        if (file.size > 10 * 1024 * 1024) {
-                            this.showStatus('文件大小不能超过10MB: ' + file.name, 'error');
-                            continue;
-                        }
-
-                        if (!this.files.some(f => f.name === file.name)) {
-                            this.files.push(file);
-                            this.addFileToList(file);
-                        }
-                    } else {
-                        this.showStatus('请上传Markdown文件(.md): ' + file.name, 'error');
-                    }
-                }
-                this.updateSubmitButton();
-            }
-
-            addFileToList(file) {
-                const fileList = document.getElementById('fileList');
-                const fileItem = document.createElement('div');
-                fileItem.className = 'file-item';
-                fileItem.innerHTML = `
-                    <span class="file-name">${file.name}</span>
-                    <span class="file-size">${this.formatFileSize(file.size)}</span>
-                    <span class="remove-file" onclick="uploader.removeFile('${file.name}')">
-                        <i class="fas fa-times"></i>
-                    </span>
-                `;
-                fileList.appendChild(fileItem);
-            }
-
-            removeFile(fileName) {
-                this.files = this.files.filter(f => f.name !== fileName);
-                this.updateFileList();
-                this.updateSubmitButton();
-            }
-
-            updateFileList() {
-                const fileList = document.getElementById('fileList');
-                fileList.innerHTML = '';
-                this.files.forEach(file => this.addFileToList(file));
-            }
-
-            updateSubmitButton() {
-                const submitBtn = document.getElementById('submitBtn');
-                submitBtn.disabled = this.files.length === 0;
-            }
-
-            async submitForm() {
-                if (this.files.length === 0) {
-                    this.showStatus('请至少上传一个文件', 'error');
-                    return;
-                }
-
-                const formData = new FormData();
-                const novelData = {
-                    title: document.getElementById('novelTitle').value,
-                    author: document.getElementById('novelAuthor').value,
-                    description: document.getElementById('novelDescription').value,
-                    tags: document.getElementById('novelTags').value.split(',').map(tag => tag.trim()),
-                    timestamp: new Date().toISOString()
-                };
-
-                formData.append('novelData', JSON.stringify(novelData));
-                
-                this.files.forEach((file, index) => {
-                    formData.append('chapters', file, file.name);
-                });
-
-                this.showProgress(true);
-                this.setSubmitButtonState(false, '上传中...');
-
-                try {
-                    // 在实际部署中，这里应该调用您的后端API
-                    // 由于GitHub Pages是静态托管，我们需要使用GitHub API或其他服务
-                    const response = await this.simulateUpload(formData);
-                    
-                    if (response.success) {
-                        this.showStatus('上传成功！系统正在处理您的文件，几分钟后即可在网站查看。', 'success');
-                        this.resetForm();
-                    } else {
-                        throw new Error(response.message || '上传失败');
-                    }
-                } catch (error) {
-                    this.showStatus('上传失败: ' + error.message, 'error');
-                } finally {
-                    this.showProgress(false);
-                    this.setSubmitButtonState(true, '上传并部署');
-                }
-            }
-
-            // 模拟上传函数 - 在实际环境中需要替换为真实的API调用
-            async simulateUpload(formData) {
-                // 显示上传进度
-                await this.simulateProgress();
-                
-                // 这里应该是实际的API调用
-                // 例如：const response = await fetch('/api/upload', { method: 'POST', body: formData });
-                
-                return new Promise((resolve) => {
-                    setTimeout(() => {
-                        resolve({
-                            success: true,
-                            message: '文件已接收，正在处理...',
-                            uploadId: 'simulated-' + Date.now()
-                        });
-                    }, 2000);
-                });
-            }
-
-            async simulateProgress() {
-                const progressBar = document.getElementById('progress');
-                for (let i = 0; i <= 100; i += 10) {
-                    progressBar.style.width = i + '%';
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                }
-            }
-
-            showProgress(show) {
-                document.getElementById('progressBar').style.display = show ? 'block' : 'none';
-                if (!show) {
-                    document.getElementById('progress').style.width = '0%';
-                }
-            }
-
-            setSubmitButtonState(enabled, text) {
-                const submitBtn = document.getElementById('submitBtn');
-                submitBtn.disabled = !enabled;
-                submitBtn.innerHTML = `<i class="fas fa-paper-plane"></i> ${text}`;
-            }
-
-            showStatus(message, type) {
-                const statusMessage = document.getElementById('statusMessage');
-                statusMessage.textContent = message;
-                statusMessage.className = `status-message ${type}`;
-                statusMessage.style.display = 'block';
-
-                setTimeout(() => {
-                    statusMessage.style.display = 'none';
-                }, 5000);
-            }
-
-            resetForm() {
-                document.getElementById('uploadForm').reset();
-                this.files = [];
-                this.updateFileList();
-                this.updateSubmitButton();
-            }
-
-            formatFileSize(bytes) {
-                if (bytes === 0) return '0 Bytes';
-                const k = 1024;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-            }
-        }
-
-        // 初始化上传器
-        const uploader = new NovelUploader();
-
-        // 添加到全局作用域以便HTML调用
-        window.uploader = uploader;
-    </script>
+  status.innerHTML += "<br>🚀 几分钟后页面将自动更新！";
+});
+</script>
 </body>
 </html>
