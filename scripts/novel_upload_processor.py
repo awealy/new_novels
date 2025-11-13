@@ -11,12 +11,14 @@ novel_upload_processor.py
 - 更新 novels.json 索引
 - 将失败上传移至 uploads/failed
 - 成功的移至 uploads/processed
+- ✅ 上传成功后自动执行 Git 提交与推送，触发 GitHub Actions 部署
 """
 
 import os
 import json
 import shutil
 import traceback
+import subprocess
 from datetime import datetime
 from pathlib import Path
 import re
@@ -59,6 +61,9 @@ class NovelUploadProcessor:
         ]:
             d.mkdir(parents=True, exist_ok=True)
 
+        self.success_count = 0
+        self.fail_count = 0
+
     def log(self, message: str):
         """记录日志"""
         line = f"[{timestamp()}] {message}"
@@ -82,21 +87,25 @@ class NovelUploadProcessor:
             shutil.copy(self.index_file, self.backup_dir / backup_name)
             self.log(f"📦 索引备份创建: {self.backup_dir / backup_name}")
 
-        success_count = 0
-        fail_count = 0
-
         for upload_dir in uploads:
             if not upload_dir.is_dir():
                 continue
             self.log(f"🚀 开始处理: {upload_dir.name}")
             try:
                 self.process_upload(upload_dir)
-                success_count += 1
+                self.success_count += 1
             except Exception as e:
-                fail_count += 1
+                self.fail_count += 1
                 self.handle_failure(upload_dir, e)
 
-        self.log(f"📊 处理完成: 成功 {success_count}, 失败 {fail_count}")
+        self.log(f"📊 处理完成: 成功 {self.success_count}, 失败 {self.fail_count}")
+
+        # ✅ 自动触发 Git 推送
+        if self.success_count > 0:
+            self.log("🔄 检测到有成功上传的小说，开始执行 git 提交与推送...")
+            self.git_push()
+        else:
+            self.log("⚠️ 无成功上传内容，不执行 Git 推送。")
 
     # ===================================
     # 上传处理逻辑
@@ -202,6 +211,24 @@ class NovelUploadProcessor:
             json.dump(record, f, ensure_ascii=False, indent=2)
 
         self.log(f"❌ 移动到失败目录: {failed_target}")
+
+    # ===================================
+    # Git 提交与推送
+    # ===================================
+    def git_push(self):
+        """执行 Git 提交与推送"""
+        try:
+            subprocess.run(["git", "config", "user.name", "github-actions"], check=True)
+            subprocess.run(["git", "config", "user.email", "actions@github.com"], check=True)
+            subprocess.run(["git", "add", "."], check=True)
+            subprocess.run([
+                "git", "commit", "-m",
+                f"📚 自动上传小说于 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            ], check=False)
+            subprocess.run(["git", "push"], check=True)
+            self.log("✅ Git push 成功，GitHub Actions 将被触发。")
+        except subprocess.CalledProcessError as e:
+            self.log(f"❌ Git push 失败: {e}")
 
 # ===================================
 # 入口点
